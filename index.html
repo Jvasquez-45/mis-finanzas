@@ -222,7 +222,21 @@
             { id: 'ahorro', nombre: 'Ahorro', icon: '🏦' },
             { id: 'inversiones', nombre: 'Inversiones', icon: '📈' },
             { id: 'ingresos', nombre: 'Ingresos', icon: '💰' },
-            { id: 'analisis', nombre: 'Análisis', icon: '📉' }
+            { id: 'analisis', nombre: 'Análisis', icon: '📉' },
+            { id: 'perfil', nombre: 'Perfil', icon: '👤' }
+        ];
+
+        const MOTIVATIONAL_PHRASES = [
+            "El éxito financiero no es cuánto ganas, sino cuánto conservas. 💰",
+            "La mejor inversión que puedes hacer es en ti mismo. 🚀",
+            "Pequeños ahorros hoy construyen grandes futuros mañana. 🏗️",
+            "No ahorres lo que te sobra después de gastar; gasta lo que te sobra después de ahorrar. 📉",
+            "El dinero es un gran siervo pero un mal amo. 🧠",
+            "Tu libertad financiera comienza con un presupuesto responsable. 📋",
+            "Cada peso cuenta en la carrera hacia tus metas. 🏁",
+            "La disciplina financiera es el puente entre tus metas y tus logros. 🌉",
+            "No mires el reloj de la riqueza; planta las semillas del ahorro. 🌱",
+            "Gastar menos de lo que ganas es la base de la abundancia. 💎"
         ];
 
         // ═══════════════════════════════════════════════════════════════
@@ -240,7 +254,10 @@
             Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
             ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>,
             Tarjeta: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>,
-            Trend: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
+            Trend: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>,
+            User: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
+            LogOut: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" /></svg>,
+            Store: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
         };
 
         // ═══════════════════════════════════════════════════════════════
@@ -250,6 +267,284 @@
         const today = () => new Date().toISOString().split('T')[0];
 
         // ═══════════════════════════════════════════════════════════════
+        // COMPONENTES DE APOYO
+        // ═══════════════════════════════════════════════════════════════
+
+        const AuthView = ({ onLogin }) => {
+            const [isLogin, setIsLogin] = useState(true);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError(null);
+                try {
+                    if (isLogin) {
+                        await auth.signInWithEmailAndPassword(email, password);
+                    } else {
+                        await auth.createUserWithEmailAndPassword(email, password);
+                    }
+                } catch (e) {
+                    setError(e.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-6 animate-fade">
+                    <div className="glass p-8 rounded-[2.5rem] max-w-md w-full shadow-2xl">
+                        <div className="text-center mb-8">
+                            <div className="w-16 h-16 bg-indigo-600/20 rounded-2xl flex items-center justify-center text-3xl mb-4 mx-auto">💵</div>
+                            <h2 className="text-2xl font-black">{isLogin ? 'Bienvenido de nuevo' : 'Crear cuenta'}</h2>
+                            <p className="text-white/40 text-xs mt-2 uppercase tracking-widest font-bold">Control Financiero ARS Pro</p>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="text-[10px] uppercase text-white/40 font-bold tracking-widest block mb-2 px-1">Email</label>
+                                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 transition-all font-medium" placeholder="tu@email.com" />
+                            </div>
+                            <div>
+                                <label className="text-[10px] uppercase text-white/40 font-bold tracking-widest block mb-2 px-1">Contraseña</label>
+                                <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 transition-all font-medium" placeholder="••••••••" />
+                            </div>
+
+                            {error && <p className="text-rose-400 text-[10px] font-bold uppercase text-center">{error}</p>}
+
+                            <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700 py-4 rounded-2xl font-black text-sm transition-all shadow-lg shadow-indigo-600/20 active:scale-95 flex items-center justify-center gap-3">
+                                {loading ? <Icons.Loader /> : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta')}
+                            </button>
+                        </form>
+
+                        <div className="mt-8 text-center">
+                            <button onClick={() => setIsLogin(!isLogin)} className="text-xs text-white/40 hover:text-white transition-all font-bold underline underline-offset-4">
+                                {isLogin ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ProfileView = ({ user, profile, setProfile, onLogout, totals, comparisonData, insights }) => {
+            const [newStore, setNewStore] = useState('');
+            const [newInversion, setNewInversion] = useState('');
+            const [isEditingInfo, setIsEditingInfo] = useState(false);
+            const [tempInfo, setTempInfo] = useState({ nombre: '', cuil: '' });
+
+            // Frase del día basada en la fecha
+            const quote = useMemo(() => {
+                const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+                return MOTIVATIONAL_PHRASES[dayOfYear % MOTIVATIONAL_PHRASES.length];
+            }, []);
+
+            const handleAddStore = () => {
+                if (!newStore.trim()) return;
+                if (profile.tiendasFrecuentes.includes(newStore.trim())) return;
+                setProfile(prev => ({ ...prev, tiendasFrecuentes: [...prev.tiendasFrecuentes, newStore.trim()] }));
+                setNewStore('');
+            };
+
+            const handleAddInversion = () => {
+                if (!newInversion.trim()) return;
+                if (profile.inversionesFrecuentes?.includes(newInversion.trim())) return;
+                setProfile(prev => ({ ...prev, inversionesFrecuentes: [...(prev.inversionesFrecuentes || []), newInversion.trim()] }));
+                setNewInversion('');
+            };
+
+            const handleRemoveStore = (store) => {
+                setProfile(prev => ({ ...prev, tiendasFrecuentes: prev.tiendasFrecuentes.filter(s => s !== store) }));
+            };
+
+            const handleRemoveInversion = (inv) => {
+                setProfile(prev => ({ ...prev, inversionesFrecuentes: prev.inversionesFrecuentes.filter(s => s !== inv) }));
+            };
+
+            const handleSaveInfo = () => {
+                setProfile(prev => ({ ...prev, ...tempInfo }));
+                setIsEditingInfo(false);
+            };
+
+            return (
+                <div className="space-y-8 animate-fade">
+                    <div className="flex justify-between items-center mb-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl bg-white/5 border border-white/10">👤</div>
+                            <div>
+                                <h2 className="text-2xl font-black tracking-tight text-white">Mi Perfil</h2>
+                                <p className="text-xs text-white/30 font-medium">{user.email}</p>
+                            </div>
+                        </div>
+                        <button onClick={onLogout} className="text-rose-400 hover:bg-rose-400/10 p-3 rounded-xl transition-all flex items-center gap-2 font-bold text-xs uppercase tracking-widest">
+                            <Icons.LogOut /> Salir
+                        </button>
+                    </div>
+
+                    {/* FRASE DEL DIA */}
+                    <div className="glass p-6 rounded-[2rem] border border-white/10 bg-gradient-to-br from-indigo-600/10 to-transparent">
+                        <div className="flex items-center gap-4">
+                            <span className="text-3xl">✨</span>
+                            <div>
+                                <p className="text-[10px] uppercase text-indigo-400 font-bold tracking-widest mb-1">Inspiración del día</p>
+                                <p className="text-sm font-medium italic text-white/80">"{quote}"</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* PERFORMANCE CARDS */}
+                        <div className="glass p-6 rounded-[2rem] border border-white/10">
+                            <p className="text-[10px] uppercase text-white/40 font-bold mb-3">Rendimiento Ahorro</p>
+                            <div className="flex items-end justify-between">
+                                <p className="text-2xl font-black">{formatARS(totals.ahorro + totals.inversiones)}</p>
+                                <span className={`text-xs font-bold px-2 py-1 rounded-lg ${comparisonData.ahorroPct >= 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-rose-400 bg-rose-400/10'}`}>
+                                    {comparisonData.ahorroPct >= 0 ? '↑' : '↓'} {Math.abs(comparisonData.ahorroPct).toFixed(1)}%
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="glass p-6 rounded-[2rem] border border-white/10">
+                            <p className="text-[10px] uppercase text-white/40 font-bold mb-3">Eficiencia Gastos</p>
+                            <div className="flex items-end justify-between">
+                                <p className="text-2xl font-black">{formatARS(totals.gastos)}</p>
+                                <span className={`text-xs font-bold px-2 py-1 rounded-lg ${comparisonData.gastosPct <= 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-rose-400 bg-rose-400/10'}`}>
+                                    {comparisonData.gastosPct <= 0 ? '↑' : '↓'} {Math.abs(comparisonData.gastosPct).toFixed(1)}%
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="glass p-6 rounded-[2rem] border border-white/10">
+                            <p className="text-[10px] uppercase text-white/40 font-bold mb-3">Estado Financiero</p>
+                            <div className="flex items-center gap-3">
+                                <div className={`w-3 h-3 rounded-full ${totals.balance >= 0 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : 'bg-rose-400 shadow-[0_0_10px_rgba(251,113,133,0.5)]'}`}></div>
+                                <p className="text-sm font-bold">{totals.balance >= 0 ? 'Saludable' : 'En riesgo'}</p>
+                            </div>
+                            <p className="text-[10px] text-white/30 mt-2">{insights[0]?.text || "Sigue registrando para más insights."}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* DATOS PERSONALES / EMPRESA */}
+                        <div className="glass p-8 rounded-[2.5rem] border border-white/10">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xs uppercase text-indigo-400 font-black tracking-widest">Datos para Facturas</h3>
+                                {!isEditingInfo && (
+                                    <button onClick={() => { setTempInfo({ nombre: profile.nombre || '', cuil: profile.cuil || '' }); setIsEditingInfo(true); }} className="text-[10px] text-white/40 hover:text-white underline font-bold uppercase">Editar</button>
+                                )}
+                            </div>
+
+                            {isEditingInfo ? (
+                                <div className="space-y-4 animate-fade">
+                                    <div>
+                                        <label className="text-[9px] uppercase text-white/40 font-bold block mb-2 px-1">Nombre / Razón Social</label>
+                                        <input type="text" value={tempInfo.nombre} onChange={e => setTempInfo({ ...tempInfo, nombre: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 transition-all font-medium text-sm" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] uppercase text-white/40 font-bold block mb-2 px-1">CUIL / CUIT</label>
+                                        <input type="text" value={tempInfo.cuil} onChange={e => setTempInfo({ ...tempInfo, cuil: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 transition-all font-medium text-sm" />
+                                    </div>
+                                    <div className="flex gap-3 mt-6">
+                                        <button onClick={() => setIsEditingInfo(false)} className="flex-1 py-3 rounded-xl border border-white/10 text-xs font-bold hover:bg-white/5 transition-all">Cancelar</button>
+                                        <button onClick={handleSaveInfo} className="flex-1 py-3 rounded-xl bg-indigo-600 text-xs font-bold hover:bg-indigo-700 transition-all">Guardar</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                        <p className="text-[9px] uppercase text-white/30 font-bold mb-1">Nombre / Razón Social</p>
+                                        <p className="text-lg font-black">{profile.nombre || 'No configurado'}</p>
+                                    </div>
+                                    <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                        <p className="text-[9px] uppercase text-white/30 font-bold mb-1">CUIL / CUIT</p>
+                                        <p className="text-lg font-black font-mono">{profile.cuil || 'No configurado'}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* TIENDAS FRECUENTES */}
+                        <div className="glass p-8 rounded-[2.5rem] border border-white/10 flex flex-col">
+                            <h3 className="text-xs uppercase text-indigo-400 font-black tracking-widest mb-6">Tiendas Frecuentes</h3>
+
+                            <div className="flex gap-2 mb-6">
+                                <input
+                                    type="text"
+                                    placeholder="Nueva tienda..."
+                                    value={newStore}
+                                    onChange={e => setNewStore(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleAddStore()}
+                                    className="flex-1 p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 transition-all font-medium text-sm"
+                                />
+                                <button onClick={handleAddStore} className="bg-white/10 hover:bg-indigo-600 p-4 rounded-2xl transition-all active:scale-95 group">
+                                    <span className="scale-125 block group-hover:rotate-90 transition-transform"><Icons.Plus /></span>
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto max-h-[300px] custom-scroll space-y-2 pr-2">
+                                {(!profile.tiendasFrecuentes || profile.tiendasFrecuentes.length === 0) ? (
+                                    <p className="text-center py-12 text-white/20 text-xs font-bold tracking-widest uppercase">No hay tiendas favoritas</p>
+                                ) : (
+                                    profile.tiendasFrecuentes.map((store, i) => (
+                                        <div key={i} className="flex justify-between items-center p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all group animate-stagger" style={{ animationDelay: `${i * 50}ms` }}>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-indigo-400"><Icons.Store /></span>
+                                                <span className="text-sm font-bold">{store}</span>
+                                            </div>
+                                            <button onClick={() => handleRemoveStore(store)} className="opacity-0 group-hover:opacity-100 p-2 text-white/20 hover:text-rose-400 transition-all">
+                                                <Icons.X />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        {/* INVERSIONES FRECUENTES */}
+                        <div className="glass p-8 rounded-[2.5rem] border border-white/10 flex flex-col">
+                            <h3 className="text-xs uppercase text-indigo-400 font-black tracking-widest mb-6">Acciones / Inversiones</h3>
+
+                            <div className="flex gap-2 mb-6">
+                                <input
+                                    type="text"
+                                    placeholder="Nueva inversión (ej: AAPL)..."
+                                    value={newInversion}
+                                    onChange={e => setNewInversion(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleAddInversion()}
+                                    className="flex-1 p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 transition-all font-medium text-sm"
+                                />
+                                <button onClick={handleAddInversion} className="bg-white/10 hover:bg-indigo-600 p-4 rounded-2xl transition-all active:scale-95 group">
+                                    <span className="scale-125 block group-hover:rotate-90 transition-transform"><Icons.Plus /></span>
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto max-h-[300px] custom-scroll space-y-2 pr-2">
+                                {(!profile.inversionesFrecuentes || profile.inversionesFrecuentes.length === 0) ? (
+                                    <p className="text-center py-12 text-white/20 text-xs font-bold tracking-widest uppercase">No hay inversiones guardadas</p>
+                                ) : (
+                                    profile.inversionesFrecuentes.map((inv, i) => (
+                                        <div key={i} className="flex justify-between items-center p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all group animate-stagger" style={{ animationDelay: `${i * 50}ms` }}>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-indigo-400"><Icons.Trend /></span>
+                                                <span className="text-sm font-bold">{inv}</span>
+                                            </div>
+                                            <button onClick={() => handleRemoveInversion(inv)} className="opacity-0 group-hover:opacity-100 p-2 text-white/20 hover:text-rose-400 transition-all">
+                                                <Icons.X />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ═══════════════════════════════════════════════════════════════
         // COMPONENTE PRINCIPAL
         // ═══════════════════════════════════════════════════════════════
         const App = () => {
@@ -257,6 +552,13 @@
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
             const [transactions, setTransactions] = useState([]);
+            const [profile, setProfile] = useState(() => {
+                const saved = localStorage.getItem('finanzas_ars_profile');
+                const defaults = { nombre: '', cuil: '', tiendasFrecuentes: [], inversionesFrecuentes: [] };
+                try {
+                    return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+                } catch (e) { return defaults; }
+            });
             const [activeTab, setActiveTab] = useState(() => localStorage.getItem('activeTab') || 'dashboard');
             const [showModal, setShowModal] = useState(false);
             const [editingId, setEditingId] = useState(null);
@@ -270,8 +572,8 @@
             });
 
             const [showFilterMenu, setShowFilterMenu] = useState(false);
-            const [compareMode, setCompareMode] = useState('standard'); // 'standard', 'compare_mes', 'compare_dia'
-            const [periodA, setPeriodA] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+            const [compareMode, setCompareMode] = useState('standard');
+            const [periodA, setPeriodA] = useState(new Date().toISOString().slice(0, 7));
             const [periodB, setPeriodB] = useState(() => {
                 const d = new Date(); d.setMonth(d.getMonth() - 1);
                 return d.toISOString().slice(0, 7);
@@ -280,49 +582,67 @@
             const [isEditingStartAmount, setIsEditingStartAmount] = useState(false);
             const [tempStartAmount, setTempStartAmount] = useState('0');
 
-            // Persistir pestaña activa
+            // Persistir estados locales
             useEffect(() => { localStorage.setItem('activeTab', activeTab); }, [activeTab]);
+            useEffect(() => { localStorage.setItem('finanzas_ars_profile', JSON.stringify(profile)); }, [profile]);
 
             // ═══════════════════════════════════════════════════════════════
-            // SISTEMA DE ALMACENAMIENTO LOCAL (100% localStorage)
+            // SISTEMA DE ALMACENAMIENTO (Local + Firebase Sync)
             // ═══════════════════════════════════════════════════════════════
             const STORAGE_KEY = 'finanzas_ars_pro_data';
 
-            // Cargar datos de localStorage al iniciar
+            // Cargar datos iniciales
             useEffect(() => {
-                try {
-                    const saved = localStorage.getItem(STORAGE_KEY);
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        console.log('Datos cargados de localStorage:', parsed.length, 'registros');
-                        setTransactions(parsed);
-                    }
-                } catch (e) {
-                    console.error('Error loading from localStorage:', e);
-                }
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) setTransactions(JSON.parse(saved));
                 setLoading(false);
             }, []);
 
-            // Guardar en localStorage cada vez que cambian las transacciones
-            // Solo si no estamos cargando inicialmente para evitar sobreescritura accidental
+            // Guardar en localStorage
             useEffect(() => {
-                if (loading) return;
-
-                try {
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-                    console.log('Datos guardados en localStorage:', transactions.length, 'registros');
-                } catch (e) {
-                    console.error('Error saving to localStorage:', e);
-                }
+                if (!loading) localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
             }, [transactions, loading]);
 
-            // Auth (solo para mostrar UID, no afecta almacenamiento)
+            // Sync con Firestore cuando hay usuario
             useEffect(() => {
-                const unsub = auth.onAuthStateChanged(async (u) => {
-                    if (!u) {
-                        try { await auth.signInAnonymously(); }
-                        catch (e) { console.warn('Firebase auth unavailable'); }
-                    } else { setUser(u); }
+                if (!user || user.isAnonymous) return;
+
+                const syncData = async () => {
+                    try {
+                        // 1. Cargar datos de la nube
+                        const doc = await db.collection('users').doc(user.uid).get();
+                        if (doc.exists) {
+                            const cloudData = doc.data();
+                            // Fusionar transacciones (por ID único para evitar duplicados)
+                            if (cloudData.transactions) {
+                                setTransactions(prev => {
+                                    const combined = [...prev];
+                                    cloudData.transactions.forEach(ct => {
+                                        if (!combined.some(t => t.id === ct.id)) combined.push(ct);
+                                    });
+                                    return combined;
+                                });
+                            }
+                            if (cloudData.profile) setProfile(cloudData.profile);
+                        }
+                    } catch (e) { console.error('Error syncing from cloud:', e); }
+                };
+                syncData();
+
+                // 2. Guardar cambios en la nube (debounced)
+                const timeout = setTimeout(() => {
+                    db.collection('users').doc(user.uid).set({ transactions, profile }, { merge: true })
+                        .catch(e => console.error('Error saving to cloud:', e));
+                }, 2000);
+
+                return () => clearTimeout(timeout);
+            }, [user, transactions, profile]);
+
+            // Auth Listener
+            useEffect(() => {
+                const unsub = auth.onAuthStateChanged((u) => {
+                    setUser(u);
+                    setLoading(false);
                 });
                 return () => unsub();
             }, []);
@@ -331,33 +651,28 @@
             // FASE 3: LÓGICA CRUD (100% local)
             // ═══════════════════════════════════════════════════════════════
             const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
-
-            // Generar ID único local
             const generateId = () => 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+            const resetForm = useCallback(() => {
+                setFormData({ articulo: '', tienda: '', monto: '', fecha: today(), seccion: 'gastos', subcategoria: 'Alquiler', metodoPago: 'efectivo', cuotas: '1', cuotaActual: '1', diaVencimiento: '10' });
+                setEditingId(null);
+                setShowModal(false);
+            }, []);
 
             const handleSave = (e) => {
                 e.preventDefault();
                 if (!formData.articulo || !formData.monto) return;
-
                 const data = {
-                    articulo: formData.articulo,
-                    tienda: formData.tienda,
-                    monto: parseFloat(formData.monto),
-                    fecha: formData.fecha,
-                    seccion: formData.seccion,
-                    subcategoria: formData.subcategoria,
-                    metodoPago: formData.metodoPago,
-                    tipo: PILARES[formData.seccion].tipo,
+                    articulo: formData.articulo, tienda: formData.tienda, monto: parseFloat(formData.monto),
+                    fecha: formData.fecha, seccion: formData.seccion, subcategoria: formData.subcategoria,
+                    metodoPago: formData.metodoPago, tipo: PILARES[formData.seccion].tipo,
                     timestamp: new Date().toISOString(),
                     ...(formData.metodoPago !== 'efectivo' && { cuotas: parseInt(formData.cuotas) || 1, cuotaActual: parseInt(formData.cuotaActual) || 1, diaVencimiento: parseInt(formData.diaVencimiento) || 10 })
                 };
-
                 if (editingId) {
-                    // Actualizar existente
                     setTransactions(prev => prev.map(t => t.id === editingId ? { ...data, id: editingId } : t));
                     showToast('Movimiento actualizado');
                 } else {
-                    // Crear nuevo
                     const newId = generateId();
                     setTransactions(prev => [...prev, { ...data, id: newId }]);
                     showToast('Movimiento guardado');
@@ -367,16 +682,10 @@
 
             const handleEdit = (t) => {
                 setFormData({
-                    articulo: t.articulo,
-                    tienda: t.tienda || '',
-                    monto: t.monto.toString(),
-                    fecha: t.fecha,
-                    seccion: t.seccion || 'gastos',
-                    subcategoria: t.subcategoria,
+                    articulo: t.articulo, tienda: t.tienda || '', monto: t.monto.toString(),
+                    fecha: t.fecha, seccion: t.seccion || 'gastos', subcategoria: t.subcategoria,
                     metodoPago: t.metodoPago || (t.seccion === 'tarjetas' ? 'visa' : 'efectivo'),
-                    cuotas: t.cuotas?.toString() || '1',
-                    cuotaActual: t.cuotaActual?.toString() || '1',
-                    diaVencimiento: t.diaVencimiento?.toString() || '10'
+                    cuotas: t.cuotas?.toString() || '1', cuotaActual: t.cuotaActual?.toString() || '1', diaVencimiento: t.diaVencimiento?.toString() || '10'
                 });
                 setEditingId(t.id);
                 setShowModal(true);
@@ -388,19 +697,12 @@
                 setDeleteConfirm(null);
             };
 
-            const resetForm = () => {
-                setFormData({ articulo: '', tienda: '', monto: '', fecha: today(), seccion: 'gastos', subcategoria: 'Alquiler', metodoPago: 'efectivo', cuotas: '1', cuotaActual: '1', diaVencimiento: '10' });
-                setEditingId(null);
-                setShowModal(false);
-            };
-
             // ═══════════════════════════════════════════════════════════════
             // FASE 1 & 3: FILTRADO EN MEMORIA Y COMPARATIVAS AVANZADAS
             // ═══════════════════════════════════════════════════════════════
             const comparisonData = useMemo(() => {
                 let rangeA = { start: new Date(), end: new Date() };
                 let rangeB = { start: new Date(), end: new Date() };
-
                 const now = new Date();
                 if (timeFilter === 'mes') {
                     rangeA.start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -427,24 +729,28 @@
                     rangeB.end = new Date(periodB + "T23:59:59");
                 }
 
-                const dataA = transactions.filter(t => { const d = new Date(t.fecha); return d >= rangeA.start && d <= (rangeA.end > now && !timeFilter.includes('compare') ? now : rangeA.end || now); });
+                const dataA = transactions.filter(t => {
+                    const d = new Date(t.fecha);
+                    return d >= rangeA.start && d <= (rangeA.end > now && !timeFilter.includes('compare') ? now : rangeA.end || now);
+                });
                 const dataB = transactions.filter(t => { const d = new Date(t.fecha); return d >= rangeB.start && d <= rangeB.end; });
-
                 const sum = (arr) => arr.reduce((s, t) => s + (t.monto || 0), 0);
                 const filterGastos = (arr) => arr.filter(t => t.tipo === 'gasto' || t.seccion === 'tarjetas');
-
                 const curGastos = sum(filterGastos(dataA));
                 const prevGastos = sum(filterGastos(dataB));
+                const curAhorroInversiones = sum(dataA.filter(t => t.tipo === 'ahorro' || t.tipo === 'inversion'));
+                const prevAhorroInversiones = sum(dataB.filter(t => t.tipo === 'ahorro' || t.tipo === 'inversion'));
 
                 const calcPct = (c, p) => p === 0 ? (c > 0 ? 100 : 0) : ((c - p) / p) * 100;
 
                 return {
                     gastosPct: calcPct(curGastos, prevGastos),
-                    curGastos,
-                    prevGastos,
+                    ahorroPct: calcPct(curAhorroInversiones, prevAhorroInversiones),
+                    curGastos, prevGastos,
+                    curAhorroInversiones, prevAhorroInversiones,
                     filtered: dataA,
-                    labelA: timeFilter.includes('compare') ? (timeFilter === 'compare_mes' ? periodA : periodA) : 'Actual',
-                    labelB: timeFilter.includes('compare') ? (timeFilter === 'compare_mes' ? periodB : periodB) : 'Anterior'
+                    labelA: timeFilter.includes('compare') ? periodA : 'Actual',
+                    labelB: timeFilter.includes('compare') ? periodB : 'Anterior'
                 };
             }, [transactions, timeFilter, periodA, periodB]);
 
@@ -452,14 +758,11 @@
 
             const byPilar = useMemo(() => {
                 const groups = { gastos: [], ahorro: [], inversiones: [], ingresos: [], tarjetas: [] };
-                filteredByTime.forEach(t => {
-                    // Mapeo de compatibilidad para datos viejos
+                (filteredByTime || []).forEach(t => {
                     let sec = t.seccion;
                     if (sec === 'gastos_fijos' || sec === 'gastos_variables') sec = 'gastos';
-
                     if (groups[sec]) groups[sec].push(t);
-                    else if (sec === 'tarjetas') groups.tarjetas.push(t); // Retrocompatibilidad
-
+                    else if (sec === 'tarjetas') groups.tarjetas.push(t);
                     if (t.metodoPago && t.metodoPago !== 'efectivo') {
                         if (!groups.tarjetas.includes(t)) groups.tarjetas.push(t);
                     }
@@ -468,29 +771,24 @@
             }, [filteredByTime]);
 
             const totals = useMemo(() => {
-                const ingresos = byPilar.ingresos.reduce((s, t) => s + (t.monto || 0), 0);
-                const gastos = byPilar.gastos.reduce((s, t) => s + (t.monto || 0), 0);
-                const ahorro = byPilar.ahorro.reduce((s, t) => s + (t.monto || 0), 0);
-                const inversiones = byPilar.inversiones.reduce((s, t) => s + (t.monto || 0), 0);
-                const tarjetas = (byPilar.tarjetas || []).reduce((s, t) => s + (t.monto || 0), 0);
-                const balance = ingresos - gastos;
-                const patrimonio = ahorro + inversiones;
-                return { ingresos, gastos, tarjetas, ahorro, inversiones, balance, patrimonio };
+                const sum = (arr = []) => arr.reduce((s, t) => s + (t.monto || 0), 0);
+                const ingresos = sum(byPilar.ingresos);
+                const gastos = sum(byPilar.gastos);
+                const ahorro = sum(byPilar.ahorro);
+                const inversiones = sum(byPilar.inversiones);
+                const tarjetas = sum(byPilar.tarjetas);
+                return { ingresos, gastos, tarjetas, ahorro, inversiones, balance: ingresos - gastos, patrimonio: ahorro + inversiones };
             }, [byPilar]);
 
-            // Alertas de vencimiento (5 días)
             const alertas = useMemo(() => {
                 const hoy = new Date().getDate();
-                return byPilar.tarjetas.filter(t => {
+                return (byPilar.tarjetas || []).filter(t => {
                     if (!t.diaVencimiento) return false;
                     const diff = t.diaVencimiento - hoy;
                     return diff >= 0 && diff <= 5;
                 });
             }, [byPilar.tarjetas]);
 
-            // ═══════════════════════════════════════════════════════════════
-            // FASE 4: DATOS PARA GRÁFICOS
-            // ═══════════════════════════════════════════════════════════════
             const pieData = useMemo(() => [
                 { name: 'Gastos', value: totals.gastos, color: PILARES.gastos.color },
                 { name: 'Ahorro', value: totals.ahorro, color: PILARES.ahorro.color },
@@ -499,18 +797,15 @@
 
             const trendData = useMemo(() => {
                 const grouped = {};
-                filteredByTime.forEach(t => {
+                (filteredByTime || []).forEach(t => {
                     const key = t.fecha;
                     if (!grouped[key]) grouped[key] = { fecha: key, ingresos: 0, gastos: 0 };
                     if (t.tipo === 'ingreso') grouped[key].ingresos += t.monto;
                     else if (t.tipo === 'gasto') grouped[key].gastos += t.monto;
                 });
-                return Object.values(grouped).sort((a, b) => a.fecha.localeCompare(b.fecha));
+                return Object.values(grouped).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
             }, [filteredByTime]);
 
-            // ═══════════════════════════════════════════════════════════════
-            // FASE 4: INSIGHTS NLP
-            // ═══════════════════════════════════════════════════════════════
             const insights = useMemo(() => {
                 const msgs = [];
                 if (totals.ingresos > 0) {
@@ -523,46 +818,25 @@
                 return msgs.slice(0, 3);
             }, [totals, alertas]);
 
-            // ═══════════════════════════════════════════════════════════════
-            // RENDERS
-            // ═══════════════════════════════════════════════════════════════
-            if (error) return (
-                <div className="min-h-screen flex items-center justify-center p-6">
-                    <div className="glass p-8 rounded-3xl max-w-md w-full text-center animate-fade">
-                        <div className="text-rose-400 mb-4 flex justify-center"><Icons.Alert /></div>
-                        <h2 className="text-xl font-bold mb-3">Configuración Requerida</h2>
-                        <p className="text-white/60 text-sm mb-6">{error}</p>
-                        <button onClick={() => location.reload()} className="w-full bg-indigo-600 hover:bg-indigo-700 py-4 rounded-2xl font-bold transition-all">Reintentar</button>
-                    </div>
-                </div>
-            );
-
-            if (loading) return (
-                <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-                    <div className="text-indigo-400"><Icons.Loader /></div>
-                    <p className="text-white/40 text-sm animate-pulse">Conectando con Firebase...</p>
-                </div>
-            );
-
-            const renderList = (items, showCuotas = false) => (
-                items.length === 0 ? (
+            const renderList = (items = [], showCuotas = false) => (
+                (!items || items.length === 0) ? (
                     <div className="text-center py-12 text-white/30">
                         <p className="text-4xl mb-3">📭</p>
                         <p className="text-sm">Sin movimientos registrados</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {items.sort((a, b) => b.fecha?.localeCompare(a.fecha)).map((t, i) => (
+                        {[...items].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '')).map((t, i) => (
                             <div key={t.id} className="glass p-4 rounded-2xl flex justify-between items-center group hover:bg-white/10 transition-all cursor-pointer animate-stagger" style={{ animationDelay: `${i * 50}ms` }} onClick={() => handleEdit(t)}>
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: `${(PILARES[t.seccion] || PILARES[t.seccion === 'gastos_fijos' || t.seccion === 'gastos_variables' ? 'gastos' : 'gastos'])?.color || '#6366f1'}30` }}>
-                                        {t.metodoPago && t.metodoPago !== 'efectivo' ? '💳' : (PILARES[t.seccion]?.icon || (t.seccion === 'gastos_fijos' || t.seccion === 'gastos_variables' ? '💸' : '📝'))}
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: `${(PILARES[t.seccion] || PILARES.gastos).color}30` }}>
+                                        {t.metodoPago && t.metodoPago !== 'efectivo' ? '💳' : (PILARES[t.seccion]?.icon || '📝')}
                                     </div>
                                     <div>
                                         <p className="font-semibold text-sm">{t.articulo}</p>
                                         <p className="text-xs text-white/40">
                                             {t.tienda ? `${t.tienda} • ` : ''}
-                                            {t.metodoPago && t.metodoPago !== 'efectivo' ? `${MEDIOS_PAGO.find(m => m.id === t.metodoPago)?.nombre} • ` : ''}
+                                            {t.metodoPago && t.metodoPago !== 'efectivo' ? `${MEDIOS_PAGO.find(m => m.id === t.metodoPago)?.nombre || ''} • ` : ''}
                                             {t.subcategoria} • {t.fecha}
                                         </p>
                                         {showCuotas && t.cuotas && (
@@ -585,6 +859,30 @@
                         ))}
                     </div>
                 )
+            );
+
+
+            // ═══════════════════════════════════════════════════════════════
+            // RENDERS
+            // ═══════════════════════════════════════════════════════════════
+            if (error) return (
+                <div className="min-h-screen flex items-center justify-center p-6">
+                    <div className="glass p-8 rounded-3xl max-w-md w-full text-center animate-fade">
+                        <div className="text-rose-400 mb-4 flex justify-center"><Icons.Alert /></div>
+                        <h2 className="text-xl font-bold mb-3">Configuración Requerida</h2>
+                        <p className="text-white/60 text-sm mb-6">{error}</p>
+                        <button onClick={() => location.reload()} className="w-full bg-indigo-600 hover:bg-indigo-700 py-4 rounded-2xl font-bold transition-all">Reintentar</button>
+                    </div>
+                </div>
+            );
+
+            if (!user) return <AuthView onLogin={() => { }} />;
+
+            if (loading) return (
+                <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+                    <div className="text-indigo-400"><Icons.Loader /></div>
+                    <p className="text-white/40 text-sm animate-pulse">Conectando con Firebase...</p>
+                </div>
             );
 
             return (
@@ -1124,6 +1422,19 @@
                                 </div>
                             </div>
                         )}
+
+                        {activeTab === 'perfil' && (
+                            <ProfileView
+                                user={user}
+                                profile={profile}
+                                setProfile={setProfile}
+                                onLogout={() => auth.signOut()}
+                                totals={totals}
+                                comparisonData={comparisonData}
+                                insights={insights}
+                            />
+                        )}
+
                         {/* MODALES GLOBALES */}
                         {isEditingStartAmount && (
                             <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
@@ -1174,7 +1485,7 @@
 
                     {/* TAB BAR MOBILE */}
                     <nav className="md:hidden fixed bottom-0 left-0 right-0 glass-dark p-2 flex justify-around z-40">
-                        {TABS.slice(0, 5).map(tab => (
+                        {TABS.slice(0, 8).map(tab => (
                             <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all ${activeTab === tab.id ? 'text-white' : 'text-white/40'}`}>
                                 <span className="text-lg">{tab.icon}</span>
                                 <span className="text-[10px] font-medium">{tab.nombre}</span>
@@ -1201,7 +1512,10 @@
                                             </div>
                                             <div>
                                                 <label className="text-[10px] uppercase text-white/40 font-bold tracking-wider block mb-2">Tienda / Lugar</label>
-                                                <input type="text" placeholder="Ej: Starbucks" value={formData.tienda} onChange={e => setFormData({ ...formData, tienda: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-indigo-500 transition-all" />
+                                                <input list="frequent-items" type="text" placeholder={formData.seccion === 'inversiones' ? 'Ej: AAPL' : 'Ej: Starbucks'} value={formData.tienda} onChange={e => setFormData({ ...formData, tienda: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-indigo-500 transition-all" />
+                                                <datalist id="frequent-items">
+                                                    {(formData.seccion === 'inversiones' ? profile.inversionesFrecuentes : profile.tiendasFrecuentes)?.map(s => <option key={s} value={s} />)}
+                                                </datalist>
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4 mb-4">
