@@ -364,6 +364,37 @@
                 setProfile(prev => ({ ...prev, inversionesFrecuentes: prev.inversionesFrecuentes.filter(s => s !== inv) }));
             };
 
+            const [selectedPilar, setSelectedPilar] = useState('gastos');
+            const [newSubcategory, setNewSubcategory] = useState('');
+
+            const handleAddSubcategory = () => {
+                if (!newSubcategory.trim()) return;
+                const currentCats = profile.categories || PILARES;
+                if (currentCats[selectedPilar].subcategorias.includes(newSubcategory.trim())) return;
+
+                const updatedCats = {
+                    ...currentCats,
+                    [selectedPilar]: {
+                        ...currentCats[selectedPilar],
+                        subcategorias: [...currentCats[selectedPilar].subcategorias, newSubcategory.trim()]
+                    }
+                };
+                setProfile(prev => ({ ...prev, categories: updatedCats }));
+                setNewSubcategory('');
+            };
+
+            const handleRemoveSubcategory = (sub) => {
+                const currentCats = profile.categories || PILARES;
+                const updatedCats = {
+                    ...currentCats,
+                    [selectedPilar]: {
+                        ...currentCats[selectedPilar],
+                        subcategorias: currentCats[selectedPilar].subcategorias.filter(s => s !== sub)
+                    }
+                };
+                setProfile(prev => ({ ...prev, categories: updatedCats }));
+            };
+
             const handleSaveInfo = () => {
                 setProfile(prev => ({ ...prev, ...tempInfo }));
                 setIsEditingInfo(false);
@@ -540,6 +571,51 @@
                             </div>
                         </div>
                     </div>
+
+                    {/* GESTION DE CATEGORIAS */}
+                    <div className="glass p-8 rounded-[2.5rem] border border-white/10">
+                        <h3 className="text-xs uppercase text-indigo-400 font-black tracking-widest mb-8">Personalizar Categorías</h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                            {Object.entries(profile.categories || PILARES).map(([key, val]) => (
+                                <button
+                                    key={key}
+                                    onClick={() => setSelectedPilar(key)}
+                                    className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${selectedPilar === key ? 'bg-indigo-600/20 border-indigo-500/50 shadow-[0_0_20px_rgba(79,70,229,0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                                >
+                                    <span className="text-2xl">{val.icon}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest">{val.nombre}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5">
+                            <div className="flex flex-col md:flex-row gap-4 mb-6">
+                                <input
+                                    type="text"
+                                    placeholder={`Nueva subcategoría para ${(profile.categories || PILARES)[selectedPilar].nombre}...`}
+                                    value={newSubcategory}
+                                    onChange={e => setNewSubcategory(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleAddSubcategory()}
+                                    className="flex-1 p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 transition-all font-medium text-sm"
+                                />
+                                <button onClick={handleAddSubcategory} className="bg-indigo-600 hover:bg-indigo-700 px-8 py-4 rounded-2xl transition-all font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2">
+                                    <Icons.Plus /> Agregar
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {(profile.categories || PILARES)[selectedPilar].subcategorias.map((sub, i) => (
+                                    <div key={i} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5 group hover:bg-white/10 transition-all">
+                                        <span className="text-xs font-bold truncate pr-2">{sub}</span>
+                                        <button onClick={() => handleRemoveSubcategory(sub)} className="p-1 text-white/20 hover:text-rose-400 transition-all opacity-0 group-hover:opacity-100">
+                                            <Icons.X />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             );
         };
@@ -554,7 +630,12 @@
             const [transactions, setTransactions] = useState([]);
             const [profile, setProfile] = useState(() => {
                 const saved = localStorage.getItem('finanzas_ars_profile');
-                const defaults = { nombre: '', cuil: '', tiendasFrecuentes: [], inversionesFrecuentes: [] };
+                const defaults = {
+                    nombre: '', cuil: '',
+                    tiendasFrecuentes: [],
+                    inversionesFrecuentes: [],
+                    categories: { ...PILARES }
+                };
                 try {
                     return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
                 } catch (e) { return defaults; }
@@ -654,10 +735,17 @@
             const generateId = () => 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
             const resetForm = useCallback(() => {
-                setFormData({ articulo: '', tienda: '', monto: '', fecha: today(), seccion: 'gastos', subcategoria: 'Alquiler', metodoPago: 'efectivo', cuotas: '1', cuotaActual: '1', diaVencimiento: '10' });
+                const defaultPilar = 'gastos';
+                const currentCategories = profile.categories || PILARES;
+                setFormData({
+                    articulo: '', tienda: '', monto: '', fecha: today(),
+                    seccion: defaultPilar,
+                    subcategoria: currentCategories[defaultPilar].subcategorias[0] || 'Otros',
+                    metodoPago: 'efectivo', cuotas: '1', cuotaActual: '1', diaVencimiento: '10'
+                });
                 setEditingId(null);
                 setShowModal(false);
-            }, []);
+            }, [profile.categories]);
 
             const handleSave = (e) => {
                 e.preventDefault();
@@ -665,7 +753,7 @@
                 const data = {
                     articulo: formData.articulo, tienda: formData.tienda, monto: parseFloat(formData.monto),
                     fecha: formData.fecha, seccion: formData.seccion, subcategoria: formData.subcategoria,
-                    metodoPago: formData.metodoPago, tipo: PILARES[formData.seccion].tipo,
+                    metodoPago: formData.metodoPago, tipo: (profile.categories || PILARES)[formData.seccion].tipo,
                     timestamp: new Date().toISOString(),
                     ...(formData.metodoPago !== 'efectivo' && { cuotas: parseInt(formData.cuotas) || 1, cuotaActual: parseInt(formData.cuotaActual) || 1, diaVencimiento: parseInt(formData.diaVencimiento) || 10 })
                 };
@@ -790,10 +878,10 @@
             }, [byPilar.tarjetas]);
 
             const pieData = useMemo(() => [
-                { name: 'Gastos', value: totals.gastos, color: PILARES.gastos.color },
-                { name: 'Ahorro', value: totals.ahorro, color: PILARES.ahorro.color },
-                { name: 'Inversiones', value: totals.inversiones, color: PILARES.inversiones.color }
-            ].filter(d => d.value > 0), [totals]);
+                { name: 'Gastos', value: totals.gastos, color: (profile.categories || PILARES).gastos.color },
+                { name: 'Ahorro', value: totals.ahorro, color: (profile.categories || PILARES).ahorro.color },
+                { name: 'Inversiones', value: totals.inversiones, color: (profile.categories || PILARES).inversiones.color }
+            ].filter(d => d.value > 0), [totals, profile.categories]);
 
             const trendData = useMemo(() => {
                 const grouped = {};
@@ -829,8 +917,8 @@
                         {[...items].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '')).map((t, i) => (
                             <div key={t.id} className="glass p-4 rounded-2xl flex justify-between items-center group hover:bg-white/10 transition-all cursor-pointer animate-stagger" style={{ animationDelay: `${i * 50}ms` }} onClick={() => handleEdit(t)}>
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: `${(PILARES[t.seccion] || PILARES.gastos).color}30` }}>
-                                        {t.metodoPago && t.metodoPago !== 'efectivo' ? '💳' : (PILARES[t.seccion]?.icon || '📝')}
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: `${((profile.categories || PILARES)[t.seccion] || (profile.categories || PILARES).gastos).color}30` }}>
+                                        {t.metodoPago && t.metodoPago !== 'efectivo' ? '💳' : ((profile.categories || PILARES)[t.seccion]?.icon || '📝')}
                                     </div>
                                     <div>
                                         <p className="font-semibold text-sm">{t.articulo}</p>
@@ -1484,11 +1572,11 @@
                     </button>
 
                     {/* TAB BAR MOBILE */}
-                    <nav className="md:hidden fixed bottom-0 left-0 right-0 glass-dark p-2 flex justify-around z-40">
-                        {TABS.slice(0, 8).map(tab => (
-                            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all ${activeTab === tab.id ? 'text-white' : 'text-white/40'}`}>
-                                <span className="text-lg">{tab.icon}</span>
-                                <span className="text-[10px] font-medium">{tab.nombre}</span>
+                    <nav className="md:hidden fixed bottom-0 left-0 right-0 glass-dark p-2 flex justify-start overflow-x-auto gap-0 z-40 no-scrollbar">
+                        {TABS.map(tab => (
+                            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center gap-1 px-5 py-2 flex-shrink-0 transition-all ${activeTab === tab.id ? 'text-white' : 'text-white/40'}`}>
+                                <span className="text-xl">{tab.icon}</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest">{tab.nombre}</span>
                             </button>
                         ))}
                     </nav>
@@ -1530,14 +1618,14 @@
                                         </div>
                                         <div className="mb-4">
                                             <label className="text-[10px] uppercase text-white/40 font-bold tracking-wider block mb-2">Pilar</label>
-                                            <select value={formData.seccion} onChange={e => setFormData({ ...formData, seccion: e.target.value, subcategoria: PILARES[e.target.value].subcategorias[0] })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-indigo-500 transition-all">
-                                                {Object.entries(PILARES).map(([key, val]) => <option key={key} value={key} className="bg-slate-900">{val.icon} {val.nombre}</option>)}
+                                            <select value={formData.seccion} onChange={e => setFormData({ ...formData, seccion: e.target.value, subcategoria: (profile.categories || PILARES)[e.target.value].subcategorias[0] || 'Otros' })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-indigo-500 transition-all">
+                                                {Object.entries(profile.categories || PILARES).map(([key, val]) => <option key={key} value={key} className="bg-slate-900">{val.icon} {val.nombre}</option>)}
                                             </select>
                                         </div>
                                         <div>
                                             <label className="text-[10px] uppercase text-white/40 font-bold tracking-wider block mb-2">Subcategoría</label>
                                             <select value={formData.subcategoria} onChange={e => setFormData({ ...formData, subcategoria: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-indigo-500 transition-all">
-                                                {PILARES[formData.seccion].subcategorias.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
+                                                {(profile.categories || PILARES)[formData.seccion].subcategorias.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
                                             </select>
                                         </div>
                                     </div>
