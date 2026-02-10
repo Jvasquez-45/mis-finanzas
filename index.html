@@ -843,12 +843,16 @@
                                 }));
                             }
                             showToast('Sincronización completada');
+                            hasSynced.current = true;
+                        } else {
+                            // Si no existe el documento, es un usuario nuevo en la nube, marcamos como sincronizado para permitir guardado
+                            hasSynced.current = true;
                         }
                     } catch (e) {
                         console.error('Error loading initial data:', e);
-                        showToast('Error al sincronizar con la nube', 'error');
-                    } finally {
-                        hasSynced.current = true;
+                        showToast(`Error al sincronizar: ${e.message}`, 'error');
+                        // IMPORTANTE: No ponemos hasSynced.current = true aquí 
+                        // para evitar que un error de red o permisos sobrescriba la nube con datos vacíos.
                     }
                 };
 
