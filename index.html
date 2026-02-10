@@ -878,18 +878,37 @@
             // Lógica de recuperación manual (Force Pull)
             const forcePull = async () => {
                 if (!user || user.isAnonymous) return;
+
+                // 1. Verificación básica de internet
+                if (!navigator.onLine) {
+                    showToast('No tienes conexión a internet', 'error');
+                    return;
+                }
+
                 setSyncInfo(prev => ({ ...prev, status: 'descargando' }));
                 try {
-                    const doc = await db.collection('users').doc(user.uid).get({ source: 'server' });
+                    // 2. Intentamos obtener del servidor
+                    // Quitamos { source: 'server' } si da problemas, o manejamos el error
+                    const doc = await db.collection('users').doc(user.uid).get();
+
                     if (doc.exists) {
                         const data = doc.data();
+
+                        // Verificamos si los datos son frescos
+                        const isFromCache = doc.metadata.fromCache;
+                        if (isFromCache) {
+                            showToast('Aviso: Cargando desde caché (servidor no disponible)', 'info');
+                        }
+
                         if (data.transactions) setTransactions(data.transactions);
                         if (data.profile) setProfile(prev => ({ ...prev, ...data.profile }));
-                        showToast('Datos recuperados de la nube');
+
+                        showToast(isFromCache ? 'Datos recuperados (Caché)' : 'Datos recuperados de la Nube');
+
                         setSyncInfo({
-                            status: 'sincronizado',
+                            status: isFromCache ? 'temporal' : 'sincronizado',
                             lastServerUpdate: data.lastUpdate || new Date().toISOString(),
-                            isLocal: false,
+                            isLocal: isFromCache,
                             cloudCount: data.transactions?.length || 0
                         });
                         hasSynced.current = true;
@@ -899,7 +918,9 @@
                     }
                 } catch (e) {
                     console.error('Error in forcePull:', e);
-                    showToast('Error al descargar: ' + e.message, 'error');
+                    const isOfflineErr = e.message.includes('offline') || e.code === 'unavailable';
+                    showToast(isOfflineErr ? 'Firebase está offline. Espera 5s y reintenta.' : 'Error: ' + e.message, 'error');
+                    setSyncInfo(prev => ({ ...prev, status: isOfflineErr ? 'offline' : 'error' }));
                 }
             };
 
