@@ -723,24 +723,27 @@
         // COMPONENTE PRINCIPAL
         // ═══════════════════════════════════════════════════════════════
         const App = () => {
+            // Función para obtener las llaves de guardado según el usuario
+            const getKeys = (u) => ({
+                trans: u ? `finanzas_data_${u.uid}` : 'finanzas_data_anon',
+                profile: u ? `finanzas_profile_${u.uid}` : 'finanzas_profile_anon'
+            });
+
+            // Perfil por defecto
+            const DEFAULT_PROFILE = {
+                nombre: '', cuil: '',
+                tiendasFrecuentes: [],
+                inversionesFrecuentes: [],
+                categories: { ...PILARES }
+            };
+
             const [user, setUser] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
 
             // Estado inicial vacío (se cargará al detectar el usuario)
             const [transactions, setTransactions] = useState([]);
-            const [profile, setProfile] = useState({
-                nombre: '', cuil: '',
-                tiendasFrecuentes: [],
-                inversionesFrecuentes: [],
-                categories: { ...PILARES }
-            });
-
-            // Función para obtener las llaves de guardado según el usuario
-            const getKeys = (u) => ({
-                trans: u ? `finanzas_data_${u.uid}` : 'finanzas_data_anon',
-                profile: u ? `finanzas_profile_${u.uid}` : 'finanzas_profile_anon'
-            });
+            const [profile, setProfile] = useState(DEFAULT_PROFILE);
 
             const [activeTab, setActiveTab] = useState(() => localStorage.getItem('activeTab') || 'dashboard');
             const [showModal, setShowModal] = useState(false);
@@ -768,38 +771,41 @@
             const [tempStartAmount, setTempStartAmount] = useState('0');
 
             // 1. PERSISTENCIA LOCAL (localStorage)
-            // Cargar datos cuando el usuario cambia o se detecta por primera vez
+            // Cargar datos cuando el usuario cambia
             useEffect(() => {
-                const keys = getKeys(user);
+                if (!user) return; // Esperar al auth listener
 
-                // Intentar cargar datos aislados de este usuario
+                const keys = getKeys(user);
                 const savedTrans = localStorage.getItem(keys.trans);
                 const savedProfile = localStorage.getItem(keys.profile);
 
                 if (savedTrans) {
                     try { setTransactions(JSON.parse(savedTrans)); } catch (e) { }
                 } else {
-                    setTransactions([]); // Reset si no hay datos para este usuario
+                    // MIGRACIÓN: Buscar datos en cualquier llave vieja disponible
+                    const legacyKeys = ['finanzas_ars_pro_data', 'finanzas_ars_v1_data', 'finanzas_ars_pro_v1'];
+                    for (const lKey of legacyKeys) {
+                        const legacy = localStorage.getItem(lKey);
+                        if (legacy) {
+                            try {
+                                const parsed = JSON.parse(legacy);
+                                if (Array.isArray(parsed) && parsed.length > 0) {
+                                    setTransactions(parsed);
+                                    break;
+                                }
+                            } catch (e) { }
+                        }
+                    }
                 }
 
                 if (savedProfile) {
-                    try {
-                        const parsed = JSON.parse(savedProfile);
-                        setProfile(prev => ({ ...prev, ...parsed }));
-                    } catch (e) { }
-                } else {
-                    setProfile({ // Reset profile a defaults
-                        nombre: '', cuil: '',
-                        tiendasFrecuentes: [],
-                        inversionesFrecuentes: [],
-                        categories: { ...PILARES }
-                    });
+                    try { setProfile(JSON.parse(savedProfile)); } catch (e) { }
                 }
             }, [user]);
 
-            // Guardar en localStorage cada vez que cambien los datos
+            // Guardar en localStorage
             useEffect(() => {
-                if (!loading) {
+                if (!loading && user) {
                     const keys = getKeys(user);
                     localStorage.setItem(keys.trans, JSON.stringify(transactions));
                     localStorage.setItem(keys.profile, JSON.stringify(profile));
@@ -886,6 +892,11 @@
             // Auth Listener
             useEffect(() => {
                 const unsub = auth.onAuthStateChanged((u) => {
+                    // RESET CRÍTICO AL CAMBIAR DE USUARIO
+                    hasSynced.current = false;
+                    setTransactions([]);
+                    setProfile(DEFAULT_PROFILE);
+
                     setUser(u);
                     setLoading(false);
                 });
