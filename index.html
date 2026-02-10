@@ -808,21 +808,19 @@
 
             // 2. SINCRONIZACIÓN NUBE (Firebase Firestore)
 
-            // 1. Efecto para CARGAR desde la nube (Solo una vez al inicio o al cambiar user)
             useEffect(() => {
                 if (!user || user.isAnonymous) {
                     hasSynced.current = true;
                     return;
                 }
 
-                const loadInitialData = async (retryCount = 0) => {
-                    try {
-                        // Intentamos forzar la carga desde el servidor si falla el cache
-                        const doc = await db.collection('users').doc(user.uid).get();
+                // Usamos onSnapshot para una sincronización en tiempo real más robusta
+                const unsubscribe = db.collection('users').doc(user.uid).onSnapshot(
+                    (doc) => {
                         if (doc.exists) {
                             const cloudData = doc.data();
 
-                            // Fusionar transacciones del servidor con las locales
+                            // Fusionar transacciones
                             if (cloudData.transactions && Array.isArray(cloudData.transactions)) {
                                 setTransactions(prev => {
                                     const combined = [...prev];
@@ -841,24 +839,29 @@
                                     categories: cloudData.profile.categories || prev.categories || PILARES
                                 }));
                             }
-                            showToast('Sincronización completada');
-                            hasSynced.current = true;
+
+                            // Si los datos vienen del servidor y no del cache, confirmamos sincronización exitosa
+                            if (!doc.metadata.fromCache) {
+                                showToast('Sincronización en la nube activa');
+                                hasSynced.current = true;
+                            }
                         } else {
+                            // Documento nuevo
                             hasSynced.current = true;
                         }
-                    } catch (e) {
-                        console.error('Error loading initial data:', e);
-                        if (retryCount < 2) {
-                            setTimeout(() => loadInitialData(retryCount + 1), 3000);
+                    },
+                    (err) => {
+                        console.error('Error en onSnapshot:', err);
+                        // Si el error es de offline, no bloqueamos totalmente pero avisamos
+                        if (err.message.includes('offline')) {
+                            showToast('Modo sin conexión: Los datos se guardarán localmente.', 'info');
                         } else {
-                            const isOffline = e.message.includes('offline');
-                            showToast(isOffline ? 'Conexión inestable. Prueba recargar la página.' : `Error: ${e.message}`, 'error');
+                            showToast(`Error de sincronización: ${err.message}`, 'error');
                         }
                     }
-                };
+                );
 
-                hasSynced.current = false;
-                loadInitialData();
+                return () => unsubscribe();
             }, [user]);
 
             // 2. Efecto para GUARDAR en la nube (Debounced y solo si ya se sincronizó una vez)
