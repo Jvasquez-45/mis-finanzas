@@ -476,6 +476,64 @@
                         </div>
                     </div>
 
+                    {/* CENTRO DE SINCRONIZACIÓN */}
+                    <div className="glass p-8 rounded-[2rem] border border-white/10 bg-gradient-to-br from-indigo-500/5 to-transparent relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                            <div className="w-64 h-64 bg-indigo-500 rounded-full blur-3xl"></div>
+                        </div>
+
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 className="text-sm font-bold tracking-tight mb-1 flex items-center gap-2">
+                                        <span className={`w-2 h-2 rounded-full ${syncInfo.status === 'sincronizado' ? 'bg-emerald-500' : 'bg-indigo-500 animate-pulse'}`}></span>
+                                        Centro de Sincronización
+                                    </h3>
+                                    <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Respaldo y Continuidad en la Nube</p>
+                                </div>
+                                <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${syncInfo.status === 'sincronizado' ? 'bg-emerald-500/10 text-emerald-400' :
+                                        syncInfo.status === 'error' ? 'bg-rose-500/10 text-rose-400' :
+                                            'bg-indigo-500/20 text-indigo-300'
+                                    }`}>
+                                    {syncInfo.status}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col justify-center">
+                                    <span className="text-[9px] text-white/30 uppercase font-black mb-1">Última Sincronización</span>
+                                    <span className="text-xs font-mono text-white/90">
+                                        {syncInfo.lastServerUpdate ? new Date(syncInfo.lastServerUpdate).toLocaleString() : 'NUNCA'}
+                                    </span>
+                                </div>
+
+                                <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col justify-center">
+                                    <span className="text-[9px] text-white/30 uppercase font-black mb-1">Estado del Almacén</span>
+                                    <span className="text-xs text-white/90 font-bold">{syncInfo.isLocal ? '📂 Copia Local' : '☁️ Servidor Vivo'}</span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={forcePush}
+                                        disabled={syncInfo.status === 'guardando'}
+                                        className="flex items-center justify-center gap-2 py-4 bg-indigo-600/20 hover:bg-indigo-600/40 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-indigo-500/30 group/btn"
+                                    >
+                                        <span className="group-hover/btn:-translate-y-1 transition-transform">📤</span>
+                                        {syncInfo.status === 'guardando' ? 'Subiendo' : 'Subir'}
+                                    </button>
+                                    <button
+                                        onClick={forcePull}
+                                        disabled={syncInfo.status === 'cargando'}
+                                        className="flex items-center justify-center gap-2 py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10 group/btn"
+                                    >
+                                        <span className="group-hover/btn:translate-y-1 transition-transform">📥</span>
+                                        {syncInfo.status === 'cargando' ? 'Bajando' : 'Bajar'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* PERFORMANCE CARDS */}
                         <div className="glass p-6 rounded-[2rem] border border-white/10">
@@ -1718,59 +1776,6 @@
                                 {/* SECCIÓN MIGRADA: TIENDAS Y CATEGORÍAS */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* CENTRO DE SINCRONIZACIÓN */}
-                                    <div className="glass p-8 rounded-[2.5rem] border border-white/5 order-last md:order-none">
-                                        <div className="flex justify-between items-center mb-6">
-                                            <div>
-                                                <h3 className="text-sm font-bold tracking-tight mb-1 flex items-center gap-2">
-                                                    <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                                                    Centro de Sincronización
-                                                </h3>
-                                                <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Estado de la nube</p>
-                                            </div>
-                                            <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${syncInfo.status === 'sincronizado' ? 'bg-emerald-500/10 text-emerald-400' :
-                                                    syncInfo.status === 'error' ? 'bg-rose-500/10 text-rose-400' :
-                                                        'bg-indigo-500/10 text-indigo-400'
-                                                }`}>
-                                                {syncInfo.status}
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <span className="text-[10px] text-white/30 uppercase font-bold">Última Actualización</span>
-                                                    <span className="text-[10px] font-mono text-white/60">
-                                                        {syncInfo.lastServerUpdate ? new Date(syncInfo.lastServerUpdate).toLocaleString() : 'Nunca'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] text-white/30 uppercase font-bold">Origen de datos</span>
-                                                    <span className="text-[10px] text-white/60 font-bold">{syncInfo.isLocal ? 'Local (Cache)' : 'Servidor (Real)'}</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-3 pt-2">
-                                                <button
-                                                    onClick={forcePush}
-                                                    disabled={syncInfo.status === 'guardando'}
-                                                    className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all border border-white/5"
-                                                >
-                                                    <span>📤</span> {syncInfo.status === 'guardando' ? 'Subiendo...' : 'Subir Forzoso'}
-                                                </button>
-                                                <button
-                                                    onClick={forcePull}
-                                                    disabled={syncInfo.status === 'cargando'}
-                                                    className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all border border-white/5"
-                                                >
-                                                    <span>📥</span> {syncInfo.status === 'cargando' ? 'Bajando...' : 'Bajar Forzoso'}
-                                                </button>
-                                            </div>
-
-                                            <p className="text-[9px] text-white/20 text-center leading-relaxed">
-                                                Usa estos controles solo si notas que tus otros dispositivos no reciben los cambios automáticamente.
-                                            </p>
-                                        </div>
-                                    </div>
 
                                     <div className="glass p-8 rounded-[2rem] border border-white/10">
                                         <h3 className="text-xs uppercase text-white/40 font-black tracking-widest mb-8">Distribución por Categoría</h3>
