@@ -842,7 +842,8 @@
                     showToast('Datos subidos forzosamente');
                     setSyncInfo(prev => ({ ...prev, status: 'sincronizado', isLocal: false }));
                 } catch (e) {
-                    showToast('Error al subir datos', 'error');
+                    console.error('Push error:', e);
+                    showToast(`Error al subir datos: ${e.message}`, 'error');
                     setSyncInfo(prev => ({ ...prev, status: 'error' }));
                 }
             };
@@ -851,18 +852,31 @@
                 if (!user || user.isAnonymous) return;
                 setSyncInfo(prev => ({ ...prev, status: 'cargando' }));
                 try {
-                    const doc = await db.collection('users').doc(user.uid).get({ source: 'server' });
+                    // Quitamos source:server para permitir que Firebase use el cache si el servidor demora,
+                    // pero forzamos una recarga real
+                    const doc = await db.collection('users').doc(user.uid).get();
                     if (doc.exists) {
                         const data = doc.data();
+
+                        // En un Pull Forzoso, SOBREESCRIBIMOS el estado local para asegurar paridad
                         if (data.transactions) setTransactions(data.transactions);
-                        if (data.profile) setProfile(data.profile);
-                        showToast('Datos descargados del servidor');
-                        setSyncInfo(prev => ({ ...prev, status: 'sincronizado', isLocal: false }));
+                        if (data.profile) setProfile(prev => ({ ...prev, ...data.profile }));
+
+                        showToast('Sincronización manual completada');
+                        setSyncInfo({
+                            status: 'sincronizado',
+                            lastServerUpdate: data.lastUpdate || new Date().toISOString(),
+                            isLocal: doc.metadata.fromCache
+                        });
+                        hasSynced.current = true;
                     } else {
-                        showToast('No hay datos en el servidor');
+                        showToast('No se encontraron datos en la nube para este usuario', 'info');
+                        setSyncInfo(prev => ({ ...prev, status: 'nuevo' }));
                     }
                 } catch (e) {
-                    showToast('Error al descargar datos', 'error');
+                    console.error('Pull error:', e);
+                    showToast(`Error al descargar: ${e.message}`, 'error');
+                    setSyncInfo(prev => ({ ...prev, status: 'error' }));
                 }
             };
 
