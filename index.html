@@ -723,12 +723,22 @@
         // COMPONENTE PRINCIPAL
         // ═══════════════════════════════════════════════════════════════
         const App = () => {
+            const STORAGE_KEY_TRANS = 'finanzas_ars_v1_data';
+            const STORAGE_KEY_PROFILE = 'finanzas_ars_profile';
+
             const [user, setUser] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
-            const [transactions, setTransactions] = useState([]);
+
+            // Cargar transacciones desde localStorage al inicio
+            const [transactions, setTransactions] = useState(() => {
+                const saved = localStorage.getItem(STORAGE_KEY_TRANS);
+                try { return saved ? JSON.parse(saved) : []; } catch (e) { return []; }
+            });
+
+            // Cargar perfil desde localStorage al inicio
             const [profile, setProfile] = useState(() => {
-                const saved = localStorage.getItem('finanzas_ars_profile');
+                const saved = localStorage.getItem(STORAGE_KEY_PROFILE);
                 const defaults = {
                     nombre: '', cuil: '',
                     tiendasFrecuentes: [],
@@ -739,6 +749,7 @@
                     return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
                 } catch (e) { return defaults; }
             });
+
             const [activeTab, setActiveTab] = useState(() => localStorage.getItem('activeTab') || 'dashboard');
             const [showModal, setShowModal] = useState(false);
             const [editingId, setEditingId] = useState(null);
@@ -764,26 +775,38 @@
             const [isEditingStartAmount, setIsEditingStartAmount] = useState(false);
             const [tempStartAmount, setTempStartAmount] = useState('0');
 
-            // Persistir estados locales
-            useEffect(() => { localStorage.setItem('activeTab', activeTab); }, [activeTab]);
-            useEffect(() => { localStorage.setItem('finanzas_ars_profile', JSON.stringify(profile)); }, [profile]);
-
-            // ═══════════════════════════════════════════════════════════════
-            // SISTEMA DE ALMACENAMIENTO (Local + Firebase Sync)
-            // ═══════════════════════════════════════════════════════════════
-            const STORAGE_KEY = 'finanzas_ars_pro_data';
-
-            // Cargar datos iniciales
+            // 1. PERSISTENCIA LOCAL (localStorage)
+            // Cargar datos al iniciar
             useEffect(() => {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) setTransactions(JSON.parse(saved));
-                setLoading(false);
+                const keys = [STORAGE_KEY_TRANS, 'finanzas_ars_pro_data', 'finanzas_ars_v1_data'];
+                let localTrans = [];
+                for (const key of keys) {
+                    const saved = localStorage.getItem(key);
+                    if (saved) {
+                        try {
+                            const parsed = JSON.parse(saved);
+                            if (Array.isArray(parsed)) {
+                                // Combinamos si hay datos en multiples llaves (poco común pero por seguridad)
+                                parsed.forEach(t => {
+                                    if (!localTrans.some(lt => lt.id === t.id)) localTrans.push(t);
+                                });
+                            }
+                        } catch (e) { }
+                    }
+                }
+                if (localTrans.length > 0) setTransactions(localTrans);
             }, []);
 
-            // Guardar en localStorage
+            // Guardar en localStorage cada vez que cambien los datos
             useEffect(() => {
-                if (!loading) localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-            }, [transactions, loading]);
+                if (!loading) {
+                    localStorage.setItem(STORAGE_KEY_TRANS, JSON.stringify(transactions));
+                    localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile));
+                    localStorage.setItem('activeTab', activeTab);
+                }
+            }, [transactions, profile, activeTab, loading]);
+
+            // 2. SINCRONIZACIÓN NUBE (Firebase Firestore)
 
             // 1. Efecto para CARGAR desde la nube (Solo una vez al inicio o al cambiar user)
             useEffect(() => {
@@ -797,19 +820,33 @@
                         const doc = await db.collection('users').doc(user.uid).get();
                         if (doc.exists) {
                             const cloudData = doc.data();
-                            if (cloudData.transactions) {
+
+                            // Fusionar transacciones del servidor con las locales
+                            if (cloudData.transactions && Array.isArray(cloudData.transactions)) {
                                 setTransactions(prev => {
                                     const combined = [...prev];
                                     cloudData.transactions.forEach(ct => {
                                         if (!combined.some(t => t.id === ct.id)) combined.push(ct);
                                     });
+                                    // Ordenar por fecha o timestamp si es necesario
                                     return combined;
                                 });
                             }
-                            if (cloudData.profile) setProfile(cloudData.profile);
+
+                            // Fusionar perfil (el de la nube tiene prioridad para cosas globales)
+                            if (cloudData.profile) {
+                                setProfile(prev => ({
+                                    ...prev,
+                                    ...cloudData.profile,
+                                    // Aseguramos que las categorías no se pierdan si el cloud tiene un formato viejo
+                                    categories: cloudData.profile.categories || prev.categories || PILARES
+                                }));
+                            }
+                            showToast('Sincronización completada');
                         }
                     } catch (e) {
                         console.error('Error loading initial data:', e);
+                        showToast('Error al sincronizar con la nube', 'error');
                     } finally {
                         hasSynced.current = true;
                     }
@@ -819,12 +856,18 @@
                 loadInitialData();
             }, [user]);
 
-            // 2. Efecto para GUARDAR en la nube (Debounced y solo si ya se sincronizó)
+            // 2. Efecto para GUARDAR en la nube (Debounced y solo si ya se sincronizó una vez)
             useEffect(() => {
+                // No guardar si no hay usuario o si no hemos terminado de cargar lo que ya había
                 if (!user || user.isAnonymous || !hasSynced.current) return;
 
                 const timeout = setTimeout(() => {
-                    db.collection('users').doc(user.uid).set({ transactions, profile }, { merge: true })
+                    db.collection('users').doc(user.uid).set({
+                        transactions,
+                        profile,
+                        lastUpdate: new Date().toISOString()
+                    }, { merge: true })
+                        .then(() => console.log('Nube actualizada correctamente'))
                         .catch(e => console.error('Error saving to cloud:', e));
                 }, 3000);
 
