@@ -330,7 +330,7 @@
             );
         };
 
-        const ProfileView = ({ user, profile, setProfile, onLogout, totals, comparisonData, insights }) => {
+        const ProfileView = ({ user, profile, setProfile, onLogout, totals, comparisonData, insights, syncInfo, forcePush, forcePull }) => {
             const [newStore, setNewStore] = useState('');
             const [newInversion, setNewInversion] = useState('');
             const [isEditingInfo, setIsEditingInfo] = useState(false);
@@ -769,6 +769,43 @@
             const [sessionStartAmount, setSessionStartAmount] = useState(0);
             const [isEditingStartAmount, setIsEditingStartAmount] = useState(false);
             const [tempStartAmount, setTempStartAmount] = useState('0');
+            const [syncInfo, setSyncInfo] = useState({ status: 'sincronizando', lastServerUpdate: null, isLocal: true });
+
+            const forcePush = async () => {
+                if (!user || user.isAnonymous) return;
+                setSyncInfo(prev => ({ ...prev, status: 'guardando' }));
+                try {
+                    await db.collection('users').doc(user.uid).set({
+                        transactions,
+                        profile,
+                        lastUpdate: new Date().toISOString()
+                    }, { merge: true });
+                    showToast('Datos subidos forzosamente');
+                    setSyncInfo(prev => ({ ...prev, status: 'sincronizado', isLocal: false }));
+                } catch (e) {
+                    showToast('Error al subir datos', 'error');
+                    setSyncInfo(prev => ({ ...prev, status: 'error' }));
+                }
+            };
+
+            const forcePull = async () => {
+                if (!user || user.isAnonymous) return;
+                setSyncInfo(prev => ({ ...prev, status: 'cargando' }));
+                try {
+                    const doc = await db.collection('users').doc(user.uid).get({ source: 'server' });
+                    if (doc.exists) {
+                        const data = doc.data();
+                        if (data.transactions) setTransactions(data.transactions);
+                        if (data.profile) setProfile(data.profile);
+                        showToast('Datos descargados del servidor');
+                        setSyncInfo(prev => ({ ...prev, status: 'sincronizado', isLocal: false }));
+                    } else {
+                        showToast('No hay datos en el servidor');
+                    }
+                } catch (e) {
+                    showToast('Error al descargar datos', 'error');
+                }
+            };
 
             // 1. PERSISTENCIA LOCAL (localStorage)
             // Cargar datos cuando el usuario cambia
@@ -824,6 +861,8 @@
                 // Usamos onSnapshot para una sincronización en tiempo real más robusta
                 const unsubscribe = db.collection('users').doc(user.uid).onSnapshot(
                     (doc) => {
+                        const isFromServer = !doc.metadata.fromCache;
+
                         if (doc.exists) {
                             const cloudData = doc.data();
 
@@ -847,23 +886,27 @@
                                 }));
                             }
 
-                            // Si los datos vienen del servidor y no del cache, confirmamos sincronización exitosa
-                            if (!doc.metadata.fromCache) {
-                                showToast('Sincronización en la nube activa');
+                            setSyncInfo({
+                                status: isFromServer ? 'sincronizado' : 'temporal',
+                                lastServerUpdate: cloudData.lastUpdate,
+                                isLocal: !isFromServer
+                            });
+
+                            if (isFromServer) {
                                 hasSynced.current = true;
                             }
                         } else {
                             // Documento nuevo
                             hasSynced.current = true;
+                            setSyncInfo({ status: 'nuevo', lastServerUpdate: null, isLocal: false });
                         }
                     },
                     (err) => {
                         console.error('Error en onSnapshot:', err);
-                        // Si el error es de offline, no bloqueamos totalmente pero avisamos
-                        if (err.message.includes('offline')) {
-                            showToast('Modo sin conexión: Los datos se guardarán localmente.', 'info');
-                        } else {
-                            showToast(`Error de sincronización: ${err.message}`, 'error');
+                        const isOffline = err.message.includes('offline');
+                        setSyncInfo({ status: isOffline ? 'offline' : 'error', lastServerUpdate: null, isLocal: true });
+                        if (isOffline) {
+                            showToast('Modo sin conexión detectado', 'info');
                         }
                     }
                 );
@@ -1672,8 +1715,63 @@
                                         <p className="text-xs text-white/30 font-medium">Métricas globales y comportamiento</p>
                                     </div>
                                 </div>
-
+                                {/* SECCIÓN MIGRADA: TIENDAS Y CATEGORÍAS */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* CENTRO DE SINCRONIZACIÓN */}
+                                    <div className="glass p-8 rounded-[2.5rem] border border-white/5 order-last md:order-none">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <div>
+                                                <h3 className="text-sm font-bold tracking-tight mb-1 flex items-center gap-2">
+                                                    <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                                                    Centro de Sincronización
+                                                </h3>
+                                                <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Estado de la nube</p>
+                                            </div>
+                                            <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${syncInfo.status === 'sincronizado' ? 'bg-emerald-500/10 text-emerald-400' :
+                                                    syncInfo.status === 'error' ? 'bg-rose-500/10 text-rose-400' :
+                                                        'bg-indigo-500/10 text-indigo-400'
+                                                }`}>
+                                                {syncInfo.status}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-[10px] text-white/30 uppercase font-bold">Última Actualización</span>
+                                                    <span className="text-[10px] font-mono text-white/60">
+                                                        {syncInfo.lastServerUpdate ? new Date(syncInfo.lastServerUpdate).toLocaleString() : 'Nunca'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] text-white/30 uppercase font-bold">Origen de datos</span>
+                                                    <span className="text-[10px] text-white/60 font-bold">{syncInfo.isLocal ? 'Local (Cache)' : 'Servidor (Real)'}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                                <button
+                                                    onClick={forcePush}
+                                                    disabled={syncInfo.status === 'guardando'}
+                                                    className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all border border-white/5"
+                                                >
+                                                    <span>📤</span> {syncInfo.status === 'guardando' ? 'Subiendo...' : 'Subir Forzoso'}
+                                                </button>
+                                                <button
+                                                    onClick={forcePull}
+                                                    disabled={syncInfo.status === 'cargando'}
+                                                    className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all border border-white/5"
+                                                >
+                                                    <span>📥</span> {syncInfo.status === 'cargando' ? 'Bajando...' : 'Bajar Forzoso'}
+                                                </button>
+                                            </div>
+
+                                            <p className="text-[9px] text-white/20 text-center leading-relaxed">
+                                                Usa estos controles solo si notas que tus otros dispositivos no reciben los cambios automáticamente.
+                                            </p>
+                                        </div>
+                                    </div>
+
                                     <div className="glass p-8 rounded-[2rem] border border-white/10">
                                         <h3 className="text-xs uppercase text-white/40 font-black tracking-widest mb-8">Distribución por Categoría</h3>
                                         <div className="h-[300px]">
@@ -1683,7 +1781,7 @@
                                                         <Pie data={pieData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5} dataKey="value" stroke="none">
                                                             {pieData.map((entry, i) => <Cell key={i} fill={entry.color} cornerRadius={10} />)}
                                                         </Pie>
-                                                        <Tooltip formatter={(v) => formatARS(v)} contentStyle={{ background: '#121421', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }} />
+                                                        <Tooltip formatter={(v) => formatARS(v)} contentStyle={{ background: '#121421', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.9)' }} />
                                                     </PieChart>
                                                 </ResponsiveContainer>
                                             ) : <p className="text-center py-12 text-white/20">Sin datos</p>}
@@ -1723,6 +1821,9 @@
                                 totals={totals}
                                 comparisonData={comparisonData}
                                 insights={insights}
+                                syncInfo={syncInfo}
+                                forcePush={forcePush}
+                                forcePull={forcePull}
                             />
                         )}
 
