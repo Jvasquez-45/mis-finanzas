@@ -815,8 +815,9 @@
                     return;
                 }
 
-                const loadInitialData = async () => {
+                const loadInitialData = async (retryCount = 0) => {
                     try {
+                        // Intentamos forzar la carga desde el servidor si falla el cache
                         const doc = await db.collection('users').doc(user.uid).get();
                         if (doc.exists) {
                             const cloudData = doc.data();
@@ -828,31 +829,31 @@
                                     cloudData.transactions.forEach(ct => {
                                         if (!combined.some(t => t.id === ct.id)) combined.push(ct);
                                     });
-                                    // Ordenar por fecha o timestamp si es necesario
                                     return combined;
                                 });
                             }
 
-                            // Fusionar perfil (el de la nube tiene prioridad para cosas globales)
+                            // Fusionar perfil
                             if (cloudData.profile) {
                                 setProfile(prev => ({
                                     ...prev,
                                     ...cloudData.profile,
-                                    // Aseguramos que las categorías no se pierdan si el cloud tiene un formato viejo
                                     categories: cloudData.profile.categories || prev.categories || PILARES
                                 }));
                             }
                             showToast('Sincronización completada');
                             hasSynced.current = true;
                         } else {
-                            // Si no existe el documento, es un usuario nuevo en la nube, marcamos como sincronizado para permitir guardado
                             hasSynced.current = true;
                         }
                     } catch (e) {
                         console.error('Error loading initial data:', e);
-                        showToast(`Error al sincronizar: ${e.message}`, 'error');
-                        // IMPORTANTE: No ponemos hasSynced.current = true aquí 
-                        // para evitar que un error de red o permisos sobrescriba la nube con datos vacíos.
+                        if (retryCount < 2) {
+                            setTimeout(() => loadInitialData(retryCount + 1), 3000);
+                        } else {
+                            const isOffline = e.message.includes('offline');
+                            showToast(isOffline ? 'Conexión inestable. Prueba recargar la página.' : `Error: ${e.message}`, 'error');
+                        }
                     }
                 };
 
