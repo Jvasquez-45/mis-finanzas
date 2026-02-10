@@ -492,8 +492,8 @@
                                     <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Respaldo y Continuidad en la Nube</p>
                                 </div>
                                 <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${syncInfo.status === 'sincronizado' ? 'bg-emerald-500/10 text-emerald-400' :
-                                        syncInfo.status === 'error' ? 'bg-rose-500/10 text-rose-400' :
-                                            'bg-indigo-500/20 text-indigo-300'
+                                    syncInfo.status === 'error' ? 'bg-rose-500/10 text-rose-400' :
+                                        'bg-indigo-500/20 text-indigo-300'
                                     }`}>
                                     {syncInfo.status}
                                 </div>
@@ -816,6 +816,7 @@
             });
 
             const hasSynced = useRef(false);
+            const isInitialLoadDone = useRef(false);
 
             const [showFilterMenu, setShowFilterMenu] = useState(false);
             const [compareMode, setCompareMode] = useState('standard');
@@ -896,16 +897,23 @@
                 if (savedProfile) {
                     try { setProfile(JSON.parse(savedProfile)); } catch (e) { }
                 }
+
+                // Marcamos que la carga inicial local terminó
+                isInitialLoadDone.current = true;
             }, [user]);
 
             // Guardar en localStorage
             useEffect(() => {
-                if (!loading && user) {
-                    const keys = getKeys(user);
-                    localStorage.setItem(keys.trans, JSON.stringify(transactions));
-                    localStorage.setItem(keys.profile, JSON.stringify(profile));
-                    localStorage.setItem('activeTab', activeTab);
-                }
+                // GUARDIA DE PERSISTENCIA: No guardar si:
+                // 1. Aún está cargando
+                // 2. No hay usuario
+                // 3. NO hemos terminado la carga inicial de local (evita borrar datos en el arranque)
+                if (loading || !user || !isInitialLoadDone.current) return;
+
+                const keys = getKeys(user);
+                localStorage.setItem(keys.trans, JSON.stringify(transactions));
+                localStorage.setItem(keys.profile, JSON.stringify(profile));
+                localStorage.setItem('activeTab', activeTab);
             }, [transactions, profile, activeTab, loading, user]);
 
             // 2. SINCRONIZACIÓN NUBE (Firebase Firestore)
@@ -993,16 +1001,19 @@
             // Auth Listener
             useEffect(() => {
                 const unsub = auth.onAuthStateChanged((u) => {
-                    // RESET CRÍTICO AL CAMBIAR DE USUARIO
-                    hasSynced.current = false;
-                    setTransactions([]);
-                    setProfile(DEFAULT_PROFILE);
+                    // Solo resetear si el usuario REALMENTE cambió (evita wipes en F5)
+                    if (!u || (user && u.uid !== user.uid)) {
+                        hasSynced.current = false;
+                        isInitialLoadDone.current = false;
+                        setTransactions([]);
+                        setProfile(DEFAULT_PROFILE);
+                    }
 
                     setUser(u);
                     setLoading(false);
                 });
                 return () => unsub();
-            }, []);
+            }, [user]); // Agregamos user como dependencia para comparar IDs
 
             // ═══════════════════════════════════════════════════════════════
             // FASE 3: LÓGICA CRUD (100% local)
