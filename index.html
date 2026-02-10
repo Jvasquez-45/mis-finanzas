@@ -984,12 +984,17 @@
             useEffect(() => {
                 if (!user || user.isAnonymous) {
                     hasSynced.current = true;
+                    setLoading(false); // Si es anónimo o no hay user, no hay snap que esperar
                     return;
                 }
+
+                console.log('--- Iniciando Listeners de Nube ---');
+                setLoading(true); // Aseguramos que el logo de carga aparezca al entrar
 
                 // A. Escuchar PERFIL
                 const unsubProfile = db.collection('usuarios').doc(user.uid).collection('datos').doc('perfil').onSnapshot(
                     (doc) => {
+                        console.log('Snapshot Perfil recibido:', doc.exists ? 'Existe' : 'Nuevo');
                         if (doc.exists) {
                             const cloudProfile = doc.data();
                             setProfile(prev => ({
@@ -1013,6 +1018,7 @@
                 const unsubTrans = db.collection('usuarios').doc(user.uid).collection('transacciones').onSnapshot(
                     (snapshot) => {
                         const cloudTrans = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+                        console.log(`Snapshot Transacciones: ${cloudTrans.length} movimientos recibidos.`);
 
                         // Ordenar por fecha desc por defecto para la consistencia
                         cloudTrans.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
@@ -1026,12 +1032,16 @@
                             isLocal: false,
                             cloudCount: cloudTrans.length
                         });
+
+                        // Una vez recibida la primera ráfaga, quitamos el loading
+                        setLoading(false);
                     },
                     (err) => {
                         console.error('Error en onSnapshot Trans:', err);
-                        const isOffline = err.message.includes('offline');
+                        const isOffline = err.message.includes('offline') || err.code === 'unavailable';
                         setSyncInfo({ status: isOffline ? 'offline' : 'error', lastServerUpdate: null, isLocal: true });
                         if (isOffline) showToast('Modo sin conexión', 'info');
+                        setLoading(false); // Al menos dejamos entrar si hay error
                     }
                 );
 
@@ -1047,11 +1057,9 @@
                 return () => clearTimeout(t);
             }, [profile, user]);
 
-            // Auth Listener (Setup once)
             useEffect(() => {
                 const unsub = auth.onAuthStateChanged((u) => {
                     // RESET TOTAL: Cada vez que el auth cambie (login o logout)
-                    // Limpiamos estados locales para asegurar que onSnapshot sea la única fuente fresca
                     setTransactions([]);
                     setProfile(DEFAULT_PROFILE);
                     hasSynced.current = false;
@@ -1059,7 +1067,9 @@
                     setSyncInfo({ status: 'sincronizando', lastServerUpdate: null, isLocal: true, cloudCount: 0 });
 
                     setUser(u);
-                    setLoading(false);
+                    // IMPORTANTE: Solo ponemos loading(false) si NO hay usuario (o sea, está en login).
+                    // Si hay usuario, los snapshots de nube se encargarán de apagar el loading.
+                    if (!u) setLoading(false);
                 });
                 return () => unsub();
             }, []);
@@ -1097,20 +1107,17 @@
                     ...(formData.metodoPago !== 'efectivo' && { cuotas: parseInt(formData.cuotas) || 1, cuotaActual: parseInt(formData.cuotaActual) || 1, diaVencimiento: parseInt(formData.diaVencimiento) || 10 })
                 };
 
-                // Optimistic UI Update (opcional, onSnapshot actualizará después)
-                // setTransactions(prev => editingId ? prev.map(t => t.id === id ? data : t) : [data, ...prev]);
-
                 try {
                     if (user && !user.isAnonymous) {
+                        // Esperamos la confirmación de Firestore antes de limpiar
                         await db.collection('usuarios').doc(user.uid).collection('transacciones').doc(id).set(data);
                     }
                     showToast(editingId ? 'Movimiento actualizado' : 'Movimiento guardado');
+                    resetForm(); // Limpieza solo tras éxito
                 } catch (e) {
                     console.error('Error saving:', e);
                     showToast('Error al guardar en nube', 'error');
                 }
-
-                resetForm();
             };
 
             const handleEdit = (t) => {
@@ -1126,12 +1133,14 @@
 
             const handleDelete = async (id) => {
                 try {
+                    // Esperamos el delete
                     await db.collection('usuarios').doc(user.uid).collection('transacciones').doc(id).delete();
                     showToast('Movimiento eliminado');
+                    setDeleteConfirm(null); // Cierra el confirm
+                    resetForm(); // Por si estaba el menú de edición abierto
                 } catch (e) {
                     showToast('Error al eliminar', 'error');
                 }
-                setDeleteConfirm(null);
             };
 
             const handleDeleteAccount = async () => {
