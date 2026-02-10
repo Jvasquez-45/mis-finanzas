@@ -751,6 +751,8 @@
                 metodoPago: 'efectivo', cuotas: '1', cuotaActual: '1', diaVencimiento: '10'
             });
 
+            const hasSynced = useRef(false);
+
             const [showFilterMenu, setShowFilterMenu] = useState(false);
             const [compareMode, setCompareMode] = useState('standard');
             const [periodA, setPeriodA] = useState(new Date().toISOString().slice(0, 7));
@@ -783,17 +785,18 @@
                 if (!loading) localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
             }, [transactions, loading]);
 
-            // Sync con Firestore cuando hay usuario
+            // 1. Efecto para CARGAR desde la nube (Solo una vez al inicio o al cambiar user)
             useEffect(() => {
-                if (!user || user.isAnonymous) return;
+                if (!user || user.isAnonymous) {
+                    hasSynced.current = true;
+                    return;
+                }
 
-                const syncData = async () => {
+                const loadInitialData = async () => {
                     try {
-                        // 1. Cargar datos de la nube
                         const doc = await db.collection('users').doc(user.uid).get();
                         if (doc.exists) {
                             const cloudData = doc.data();
-                            // Fusionar transacciones (por ID único para evitar duplicados)
                             if (cloudData.transactions) {
                                 setTransactions(prev => {
                                     const combined = [...prev];
@@ -805,18 +808,28 @@
                             }
                             if (cloudData.profile) setProfile(cloudData.profile);
                         }
-                    } catch (e) { console.error('Error syncing from cloud:', e); }
+                    } catch (e) {
+                        console.error('Error loading initial data:', e);
+                    } finally {
+                        hasSynced.current = true;
+                    }
                 };
-                syncData();
 
-                // 2. Guardar cambios en la nube (debounced)
+                hasSynced.current = false;
+                loadInitialData();
+            }, [user]);
+
+            // 2. Efecto para GUARDAR en la nube (Debounced y solo si ya se sincronizó)
+            useEffect(() => {
+                if (!user || user.isAnonymous || !hasSynced.current) return;
+
                 const timeout = setTimeout(() => {
                     db.collection('users').doc(user.uid).set({ transactions, profile }, { merge: true })
                         .catch(e => console.error('Error saving to cloud:', e));
-                }, 2000);
+                }, 3000);
 
                 return () => clearTimeout(timeout);
-            }, [user, transactions, profile]);
+            }, [transactions, profile, user]);
 
             // Auth Listener
             useEffect(() => {
