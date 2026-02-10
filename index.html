@@ -367,6 +367,42 @@
             const [selectedPilar, setSelectedPilar] = useState('gastos');
             const [newSubcategory, setNewSubcategory] = useState('');
 
+            // Estado para creación de pilares
+            const [showPilarCreator, setShowPilarCreator] = useState(false);
+            const [newPilar, setNewPilar] = useState({ nombre: '', icon: '📂', color: '#6366f1', tipo: 'gasto' });
+
+            const handleAddPilar = () => {
+                if (!newPilar.nombre.trim()) return;
+                const id = 'pilar_' + Date.now();
+                const updatedCats = {
+                    ...(profile.categories || PILARES),
+                    [id]: {
+                        nombre: newPilar.nombre.trim(),
+                        icon: newPilar.icon,
+                        color: newPilar.color,
+                        tipo: newPilar.tipo,
+                        subcategorias: ['Otros']
+                    }
+                };
+                setProfile(prev => ({ ...prev, categories: updatedCats }));
+                setShowPilarCreator(false);
+                setNewPilar({ nombre: '', icon: '📂', color: '#6366f1', tipo: 'gasto' });
+                showToast('Pilar creado con éxito');
+            };
+
+            const handleRemovePilar = (id) => {
+                const defaults = ['gastos', 'ahorro', 'inversiones', 'ingresos'];
+                if (defaults.includes(id)) {
+                    showToast('No se pueden borrar las categorías principales', 'error');
+                    return;
+                }
+                const updatedCats = { ...profile.categories };
+                delete updatedCats[id];
+                setProfile(prev => ({ ...prev, categories: updatedCats }));
+                if (selectedPilar === id) setSelectedPilar('gastos');
+                showToast('Pilar eliminado');
+            };
+
             const handleAddSubcategory = () => {
                 if (!newSubcategory.trim()) return;
                 const currentCats = profile.categories || PILARES;
@@ -574,18 +610,29 @@
 
                     {/* GESTION DE CATEGORIAS */}
                     <div className="glass p-8 rounded-[2.5rem] border border-white/10">
-                        <h3 className="text-xs uppercase text-indigo-400 font-black tracking-widest mb-8">Personalizar Categorías</h3>
+                        <div className="flex justify-between items-center mb-8">
+                            <h3 className="text-xs uppercase text-indigo-400 font-black tracking-widest">Personalizar Categorías</h3>
+                            <button onClick={() => setShowPilarCreator(true)} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-600/20">
+                                + Nuevo Pilar
+                            </button>
+                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
                             {Object.entries(profile.categories || PILARES).map(([key, val]) => (
-                                <button
-                                    key={key}
-                                    onClick={() => setSelectedPilar(key)}
-                                    className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${selectedPilar === key ? 'bg-indigo-600/20 border-indigo-500/50 shadow-[0_0_20px_rgba(79,70,229,0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
-                                >
-                                    <span className="text-2xl">{val.icon}</span>
-                                    <span className="text-[10px] font-black uppercase tracking-widest">{val.nombre}</span>
-                                </button>
+                                <div key={key} className="relative group">
+                                    <button
+                                        onClick={() => setSelectedPilar(key)}
+                                        className={`w-full p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${selectedPilar === key ? 'bg-indigo-600/20 border-indigo-500/50 shadow-[0_0_20px_rgba(79,70,229,0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                                    >
+                                        <span className="text-2xl">{val.icon}</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest">{val.nombre}</span>
+                                    </button>
+                                    {!['gastos', 'ahorro', 'inversiones', 'ingresos'].includes(key) && (
+                                        <button onClick={() => handleRemovePilar(key)} className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all scale-75 hover:scale-100">
+                                            <Icons.X />
+                                        </button>
+                                    )}
+                                </div>
                             ))}
                         </div>
 
@@ -593,7 +640,7 @@
                             <div className="flex flex-col md:flex-row gap-4 mb-6">
                                 <input
                                     type="text"
-                                    placeholder={`Nueva subcategoría para ${(profile.categories || PILARES)[selectedPilar].nombre}...`}
+                                    placeholder={`Nueva subcategoría para ${(profile.categories || PILARES)[selectedPilar]?.nombre || ''}...`}
                                     value={newSubcategory}
                                     onChange={e => setNewSubcategory(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && handleAddSubcategory()}
@@ -605,7 +652,7 @@
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {(profile.categories || PILARES)[selectedPilar].subcategorias.map((sub, i) => (
+                                {(profile.categories || PILARES)[selectedPilar]?.subcategorias.map((sub, i) => (
                                     <div key={i} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5 group hover:bg-white/10 transition-all">
                                         <span className="text-xs font-bold truncate pr-2">{sub}</span>
                                         <button onClick={() => handleRemoveSubcategory(sub)} className="p-1 text-white/20 hover:text-rose-400 transition-all opacity-0 group-hover:opacity-100">
@@ -616,6 +663,44 @@
                             </div>
                         </div>
                     </div>
+
+                    {/* MODAL CREADOR DE PILARES */}
+                    {showPilarCreator && (
+                        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade">
+                            <div className="glass p-8 rounded-[2.5rem] max-w-md w-full animate-pop border border-white/10 shadow-2xl">
+                                <h3 className="text-xl font-black mb-6 text-center">Nuevo Pilar</h3>
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="text-[10px] uppercase text-white/40 font-bold block mb-2">Nombre del Pilar</label>
+                                        <input type="text" placeholder="Ej: Mascotas" value={newPilar.nombre} onChange={e => setNewPilar({ ...newPilar, nombre: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] uppercase text-white/40 font-bold block mb-2">Icono (Emoji)</label>
+                                            <input type="text" placeholder="🐶" value={newPilar.icon} onChange={e => setNewPilar({ ...newPilar, icon: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-center text-xl outline-none focus:border-indigo-500 transition-all" />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] uppercase text-white/40 font-bold block mb-2">Color</label>
+                                            <input type="color" value={newPilar.color} onChange={e => setNewPilar({ ...newPilar, color: e.target.value })} className="w-full h-[58px] p-2 bg-white/5 border border-white/10 rounded-2xl cursor-pointer" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] uppercase text-white/40 font-bold block mb-2">Tipo de Impacto</label>
+                                        <select value={newPilar.tipo} onChange={e => setNewPilar({ ...newPilar, tipo: e.target.value })} className="w-full p-4 bg-slate-900 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold appearance-none cursor-pointer">
+                                            <option value="gasto">Gasto</option>
+                                            <option value="ingreso">Ingreso</option>
+                                            <option value="ahorro">Ahorro</option>
+                                            <option value="inversion">Inversión</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex gap-4 mt-4">
+                                        <button onClick={() => setShowPilarCreator(false)} className="flex-1 py-4 rounded-2xl border border-white/10 font-bold text-xs uppercase tracking-widest hover:bg-white/5 transition-all">Cancelar</button>
+                                        <button onClick={handleAddPilar} className="flex-1 py-4 rounded-2xl bg-indigo-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/30">Crear</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -823,9 +908,9 @@
                 });
                 const dataB = transactions.filter(t => { const d = new Date(t.fecha); return d >= rangeB.start && d <= rangeB.end; });
                 const sum = (arr) => arr.reduce((s, t) => s + (t.monto || 0), 0);
-                const filterGastos = (arr) => arr.filter(t => t.tipo === 'gasto' || t.seccion === 'tarjetas');
-                const curGastos = sum(filterGastos(dataA));
-                const prevGastos = sum(filterGastos(dataB));
+                const filterByType = (arr, type) => arr.filter(t => t.tipo === type);
+                const curGastos = sum(filterByType(dataA, 'gasto'));
+                const prevGastos = sum(filterByType(dataB, 'gasto'));
                 const curAhorroInversiones = sum(dataA.filter(t => t.tipo === 'ahorro' || t.tipo === 'inversion'));
                 const prevAhorroInversiones = sum(dataB.filter(t => t.tipo === 'ahorro' || t.tipo === 'inversion'));
 
@@ -845,28 +930,43 @@
             const filteredByTime = comparisonData.filtered;
 
             const byPilar = useMemo(() => {
-                const groups = { gastos: [], ahorro: [], inversiones: [], ingresos: [], tarjetas: [] };
+                const currentCats = profile.categories || PILARES;
+                const groups = { tarjetas: [] };
+                Object.keys(currentCats).forEach(key => groups[key] = []);
+
                 (filteredByTime || []).forEach(t => {
                     let sec = t.seccion;
-                    if (sec === 'gastos_fijos' || sec === 'gastos_variables') sec = 'gastos';
                     if (groups[sec]) groups[sec].push(t);
                     else if (sec === 'tarjetas') groups.tarjetas.push(t);
+
                     if (t.metodoPago && t.metodoPago !== 'efectivo') {
                         if (!groups.tarjetas.includes(t)) groups.tarjetas.push(t);
                     }
                 });
                 return groups;
-            }, [filteredByTime]);
+            }, [filteredByTime, profile.categories]);
 
             const totals = useMemo(() => {
+                const currentCats = profile.categories || PILARES;
                 const sum = (arr = []) => arr.reduce((s, t) => s + (t.monto || 0), 0);
-                const ingresos = sum(byPilar.ingresos);
-                const gastos = sum(byPilar.gastos);
-                const ahorro = sum(byPilar.ahorro);
-                const inversiones = sum(byPilar.inversiones);
+
+                let ingresos = 0, gastos = 0, ahorro = 0, inversiones = 0;
+
+                Object.entries(byPilar).forEach(([key, items]) => {
+                    if (key === 'tarjetas') return;
+                    const catInfo = currentCats[key];
+                    if (!catInfo) return;
+
+                    const m = sum(items);
+                    if (catInfo.tipo === 'ingreso') ingresos += m;
+                    else if (catInfo.tipo === 'gasto') gastos += m;
+                    else if (catInfo.tipo === 'ahorro') ahorro += m;
+                    else if (catInfo.tipo === 'inversion') inversiones += m;
+                });
+
                 const tarjetas = sum(byPilar.tarjetas);
                 return { ingresos, gastos, tarjetas, ahorro, inversiones, balance: ingresos - gastos, patrimonio: ahorro + inversiones };
-            }, [byPilar]);
+            }, [byPilar, profile.categories]);
 
             const alertas = useMemo(() => {
                 const hoy = new Date().getDate();
@@ -877,11 +977,24 @@
                 });
             }, [byPilar.tarjetas]);
 
-            const pieData = useMemo(() => [
-                { name: 'Gastos', value: totals.gastos, color: (profile.categories || PILARES).gastos.color },
-                { name: 'Ahorro', value: totals.ahorro, color: (profile.categories || PILARES).ahorro.color },
-                { name: 'Inversiones', value: totals.inversiones, color: (profile.categories || PILARES).inversiones.color }
-            ].filter(d => d.value > 0), [totals, profile.categories]);
+            const pieData = useMemo(() => {
+                const currentCats = profile.categories || PILARES;
+                const totalsByType = { gasto: 0, ahorro: 0, inversion: 0 };
+
+                Object.entries(byPilar).forEach(([key, items]) => {
+                    if (key === 'tarjetas') return;
+                    const type = currentCats[key]?.tipo;
+                    if (totalsByType.hasOwnProperty(type)) {
+                        totalsByType[type] += items.reduce((s, t) => s + (t.monto || 0), 0);
+                    }
+                });
+
+                return [
+                    { name: 'Gastos', value: totalsByType.gasto, color: currentCats.gastos?.color || '#f43f5e' },
+                    { name: 'Ahorro', value: totalsByType.ahorro, color: currentCats.ahorro?.color || '#3b82f6' },
+                    { name: 'Inversiones', value: totalsByType.inversion, color: currentCats.inversiones?.color || '#06b6d4' }
+                ].filter(d => d.value > 0);
+            }, [byPilar, profile.categories]);
 
             const trendData = useMemo(() => {
                 const grouped = {};
