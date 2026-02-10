@@ -929,40 +929,11 @@
 
                 setSyncInfo(prev => ({ ...prev, status: 'descargando' }));
                 try {
-                    // 2. Intentamos obtener del servidor
-                    // Quitamos { source: 'server' } si da problemas, o manejamos el error
-                    const doc = await db.collection('users').doc(user.uid).get();
-
-                    if (doc.exists) {
-                        const data = doc.data();
-
-                        // Verificamos si los datos son frescos
-                        const isFromCache = doc.metadata.fromCache;
-                        if (isFromCache) {
-                            showToast('Aviso: Cargando desde caché (servidor no disponible)', 'info');
-                        }
-
-                        if (data.transactions) setTransactions(data.transactions);
-                        if (data.profile) setProfile(prev => ({ ...prev, ...data.profile }));
-
-                        showToast(isFromCache ? 'Datos recuperados (Caché)' : 'Datos recuperados de la Nube');
-
-                        setSyncInfo({
-                            status: isFromCache ? 'temporal' : 'sincronizado',
-                            lastServerUpdate: data.lastUpdate || new Date().toISOString(),
-                            isLocal: isFromCache,
-                            cloudCount: data.transactions?.length || 0
-                        });
-                        hasSynced.current = true;
-                    } else {
-                        showToast('No hay datos en la nube', 'info');
-                        setSyncInfo(prev => ({ ...prev, status: 'nuevo' }));
-                    }
+                    // Force pull simplificado: Solo avisamos si no hay datos en la nueva ruta
+                    showToast('Buscando datos en la nube...', 'info');
                 } catch (e) {
                     console.error('Error in forcePull:', e);
-                    const isOfflineErr = e.message.includes('offline') || e.code === 'unavailable';
-                    showToast(isOfflineErr ? 'Firebase está offline. Espera 5s y reintenta.' : 'Error: ' + e.message, 'error');
-                    setSyncInfo(prev => ({ ...prev, status: isOfflineErr ? 'offline' : 'error' }));
+                    showToast('Error al buscar datos', 'error');
                 }
             };
 
@@ -1029,6 +1000,7 @@
                 setLoading(true); // Aseguramos que el logo de carga aparezca al entrar
 
                 // A. Escuchar PERFIL
+                const profilePath = `usuarios/${user.uid}/datos/perfil`;
                 const unsubProfile = db.collection('usuarios').doc(user.uid).collection('datos').doc('perfil').onSnapshot(
                     (doc) => {
                         console.log('Snapshot Perfil recibido:', doc.exists ? 'Existe' : 'Nuevo');
@@ -1039,15 +1011,10 @@
                                 ...cloudProfile,
                                 categories: cloudProfile.categories || prev.categories || PILARES
                             }));
-                        } else if (!hasSynced.current) {
-                            // Si el perfil no existe en la nueva ruta, intentamos migrar del perfil viejo si existe
-                            db.collection('users').doc(user.uid).get().then(oldDoc => {
-                                if (oldDoc.exists && oldDoc.data().profile) {
-                                    console.log('Migrando perfil viejo a nueva estructura...');
-                                    db.collection('usuarios').doc(user.uid).collection('datos').doc('perfil').set(oldDoc.data().profile);
-                                }
-                            });
                         }
+                    },
+                    (err) => {
+                        console.error('🕵️ El permiso falló en esta ruta:', profilePath, err);
                     }
                 );
 
@@ -1079,7 +1046,8 @@
                         setLoading(false);
                     },
                     (err) => {
-                        console.error('Error en onSnapshot Trans:', err);
+                        const transPath = `usuarios/${user.uid}/transacciones`;
+                        console.error('🕵️ El permiso falló en esta ruta:', transPath, err);
                         const isOffline = err.message.includes('offline') || err.code === 'unavailable';
                         setSyncInfo({ status: isOffline ? 'offline' : 'error', lastServerUpdate: null, isLocal: true });
                         if (isOffline) showToast('Modo sin conexión', 'info');
@@ -1093,8 +1061,13 @@
             // Guardado automático del perfil (Debounced)
             useEffect(() => {
                 if (!user || !hasSynced.current) return;
-                const t = setTimeout(() => {
-                    db.collection('usuarios').doc(user.uid).collection('datos').doc('perfil').set(profile, { merge: true });
+                const path = `usuarios/${user.uid}/datos/perfil`;
+                const t = setTimeout(async () => {
+                    try {
+                        await db.collection('usuarios').doc(user.uid).collection('datos').doc('perfil').set(profile, { merge: true });
+                    } catch (err) {
+                        console.error('🕵️ El permiso falló en esta ruta:', path, err);
+                    }
                 }, 2000);
                 return () => clearTimeout(t);
             }, [profile, user]);
@@ -1159,15 +1132,16 @@
                 showToast(editingId ? 'Actualizando nube...' : 'Sincronizando con la nube...', 'info');
 
                 setIsSaving(true);
+                const path = `usuarios/${user.uid}/transacciones/${id}`;
                 try {
                     if (user && !user.isAnonymous) {
-                        console.log('Firestore path: usuarios/' + user.uid + '/transacciones/' + id);
+                        console.log('Firestore path:', path);
                         await db.collection('usuarios').doc(user.uid).collection('transacciones').doc(id).set(data);
                         console.log('Confirmado por Firestore');
                         showToast(editingId ? 'Datos actualizados' : 'Datos guardados');
                     }
-                } catch (e) {
-                    console.error('Error en sync de nube:', e);
+                } catch (err) {
+                    console.error('🕵️ El permiso falló en esta ruta:', path, err);
                     showToast('Error de red: Tus cambios se guardarán luego', 'error');
                 } finally {
                     setIsSaving(false);
@@ -1187,8 +1161,12 @@
 
             const handleDelete = async (id) => {
                 try {
+                    const path = `usuarios/${user.uid}/transacciones/${id}`;
                     // Esperamos el delete
-                    await db.collection('usuarios').doc(user.uid).collection('transacciones').doc(id).delete();
+                    await db.collection('usuarios').doc(user.uid).collection('transacciones').doc(id).delete().catch(err => {
+                        console.error('🕵️ El permiso falló en esta ruta:', path, err);
+                        throw err;
+                    });
                     showToast('Movimiento eliminado');
                     setDeleteConfirm(null); // Cierra el confirm
                     resetForm(); // Por si estaba el menú de edición abierto
@@ -1205,13 +1183,21 @@
                 try {
                     const uid = user.uid;
                     // Borrar transacciones
-                    const transSnaps = await db.collection('usuarios').doc(uid).collection('transacciones').get();
+                    const transPath = `usuarios/${uid}/transacciones`;
+                    const transSnaps = await db.collection('usuarios').doc(uid).collection('transacciones').get().catch(err => {
+                        console.error('🕵️ El permiso falló en esta ruta:', transPath, err);
+                        throw err;
+                    });
                     const batch = db.batch();
                     transSnaps.forEach(doc => batch.delete(doc.ref));
                     await batch.commit();
 
                     // Borrar perfil
-                    await db.collection('usuarios').doc(uid).collection('datos').doc('perfil').delete();
+                    const profilePath = `usuarios/${uid}/datos/perfil`;
+                    await db.collection('usuarios').doc(uid).collection('datos').doc('perfil').delete().catch(err => {
+                        console.error('🕵️ El permiso falló en esta ruta:', profilePath, err);
+                        throw err;
+                    });
 
                     // Borrar auth
                     await user.delete();
