@@ -383,6 +383,12 @@
             ingresos: { nombre: 'Ingreso', tipo: 'ingreso', color: '#10b981', icon: '💰', subcategorias: ['Sueldo', 'Marketing', 'Moto (Uber/Didi)', 'Ventas', 'Otros'] }
         };
 
+        const TIPO_INVERSIONES = ['Acciones', 'Cedears', 'FCI', 'Letras', 'Plazo Fijo', 'Cripto', 'Otros'];
+        const PLATAFORMAS_INV = ['IOL', 'Balanz', 'Bull Market', 'Binance', 'Lemon', 'Buenbit', 'Otro'];
+        const PLATAFORMAS_AHORRO = ['Efectivo', 'Banco de la Nación', 'Galicia', 'Mercado Pago', 'Dólar Billete', 'Cripto (Wallet/Exch)', 'Otro'];
+        const FUENTES_INGRESO = ['Sueldo', 'Marketing', 'Moto Taxi', 'Freelance', 'Venta', 'Dividendo', 'Otro'];
+        const ACCIONES_CRIPTO = ['Compra Directa', 'Staking', 'Rendimiento'];
+
         const MEDIOS_PAGO = [
             { id: 'efectivo', nombre: 'Efectivo/Débito', icon: '💵' },
             { id: 'visa', nombre: 'Visa', icon: '💳' },
@@ -1179,7 +1185,8 @@
 
             const [formData, setFormData] = useState({
                 articulo: '', tienda: '', monto: '', fecha: today(), seccion: 'gastos', subcategoria: 'Alquiler',
-                metodoPago: 'efectivo', cuotas: '1', cuotaActual: '1', diaVencimiento: '10'
+                metodoPago: 'efectivo', cuotas: '1', cuotaActual: '1', diaVencimiento: '10', moneda: 'ARS',
+                formTab: 'gastos', plataforma: '', inversionTipo: 'Acciones', fuenteIngreso: 'Sueldo', accionCripto: 'Compra Directa', cryptoTicker: ''
             });
 
             const hasSynced = useRef(false);
@@ -1393,17 +1400,18 @@
             const generateId = () => 'ars_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
 
             const resetForm = useCallback(() => {
-                const defaultPilar = 'gastos';
+                const defaultPilar = (['gastos', 'ingresos', 'inversiones', 'ahorro'].includes(activeTab)) ? activeTab : 'gastos';
                 const currentCategories = profile.categories || PILARES;
                 setFormData({
                     articulo: '', tienda: '', monto: '', fecha: today(),
                     seccion: defaultPilar,
                     subcategoria: currentCategories[defaultPilar].subcategorias[0] || 'Otros',
-                    metodoPago: 'efectivo', cuotas: '1', cuotaActual: '1', diaVencimiento: '10'
+                    metodoPago: 'efectivo', cuotas: '1', cuotaActual: '1', diaVencimiento: '10', moneda: 'ARS',
+                    formTab: defaultPilar, plataforma: '', inversionTipo: 'Acciones', fuenteIngreso: 'Sueldo', accionCripto: 'Compra Directa', cryptoTicker: ''
                 });
                 setEditingId(null);
                 setShowModal(false);
-            }, [profile.categories]);
+            }, [profile.categories, activeTab]);
 
             const handleSave = async (e) => {
                 e.preventDefault();
@@ -1415,6 +1423,12 @@
                     articulo: formData.articulo, tienda: formData.tienda, monto: parseFloat(formData.monto),
                     fecha: formData.fecha, seccion: formData.seccion, subcategoria: formData.subcategoria,
                     metodoPago: formData.metodoPago, tipo: (profile.categories || PILARES)[formData.seccion].tipo,
+                    moneda: formData.moneda || 'ARS',
+                    plataforma: formData.plataforma,
+                    inversionTipo: formData.inversionTipo,
+                    fuenteIngreso: formData.fuenteIngreso,
+                    accionCripto: formData.accionCripto,
+                    cryptoTicker: formData.cryptoTicker,
                     timestamp: new Date().toISOString(),
                     ...(formData.metodoPago !== 'efectivo' && { cuotas: parseInt(formData.cuotas) || 1, cuotaActual: parseInt(formData.cuotaActual) || 1, diaVencimiento: parseInt(formData.diaVencimiento) || 10 })
                 };
@@ -1450,7 +1464,14 @@
                     articulo: t.articulo, tienda: t.tienda || '', monto: t.monto.toString(),
                     fecha: t.fecha, seccion: t.seccion || 'gastos', subcategoria: t.subcategoria,
                     metodoPago: t.metodoPago || (t.seccion === 'tarjetas' ? 'visa' : 'efectivo'),
-                    cuotas: t.cuotas?.toString() || '1', cuotaActual: t.cuotaActual?.toString() || '1', diaVencimiento: t.diaVencimiento?.toString() || '10'
+                    cuotas: t.cuotas?.toString() || '1', cuotaActual: t.cuotaActual?.toString() || '1', diaVencimiento: t.diaVencimiento?.toString() || '10',
+                    moneda: t.moneda || 'ARS',
+                    formTab: t.seccion || 'gastos',
+                    plataforma: t.plataforma || '',
+                    inversionTipo: t.inversionTipo || 'Acciones',
+                    fuenteIngreso: t.fuenteIngreso || 'Sueldo',
+                    accionCripto: t.accionCripto || 'Compra Directa',
+                    cryptoTicker: t.cryptoTicker || ''
                 });
                 setEditingId(t.id);
                 setShowModal(true);
@@ -1643,9 +1664,34 @@
                 return [
                     { name: 'Ingresos', value: totals.ingresos, color: '#10b981' },
                     { name: 'Gastos', value: totals.gastos, color: '#f43f5e' },
-                    { name: 'Inversiones', value: totals.inversiones + totals.ahorro, color: '#3b82f6' }
+                    { name: 'Ahorro', value: totals.ahorro, color: '#6366f1' },
+                    { name: 'Inversiones', value: totals.inversiones, color: '#3b82f6' }
                 ].filter(d => d.value > 0);
             }, [totals]);
+
+            const currencyAnalysis = useMemo(() => {
+                const assets = transactions.filter(t => t.tipo === 'ahorro' || t.tipo === 'inversion');
+                const distArr = { ARS: 0, USD: 0, CRIPTO: 0 };
+                assets.forEach(t => {
+                    const m = t.moneda || 'ARS';
+                    if (distArr.hasOwnProperty(m)) distArr[m] += (t.monto || 0);
+                });
+                return [
+                    { name: 'Pesos (ARS)', value: distArr.ARS, color: '#3b82f6', icon: '🇦🇷' },
+                    { name: 'Dólares (USD)', value: distArr.USD, color: '#10b981', icon: '🇺🇸' },
+                    { name: 'Cripto', value: distArr.CRIPTO, color: '#f59e0b', icon: '₿' }
+                ].filter(d => d.value > 0);
+            }, [transactions]);
+
+            const cryptoAnalysis = useMemo(() => {
+                const cryptos = transactions.filter(t => (t.tipo === 'ahorro' || t.tipo === 'inversion') && t.moneda === 'CRIPTO');
+                const subs = {};
+                cryptos.forEach(t => {
+                    const s = t.subcategoria || 'Otros';
+                    subs[s] = (subs[s] || 0) + (t.monto || 0);
+                });
+                return Object.entries(subs).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+            }, [transactions]);
 
             const subcategoriesAnalysis = useMemo(() => {
                 const groups = { gasto: {}, ingreso: {}, inversion: {}, ahorro: {} };
@@ -2122,10 +2168,20 @@
                                     return (
                                         <>
                                             {activeTab === 'ahorro' && (
-                                                <div className="mb-8 animate-slide">
-                                                    <div className="flex items-center gap-2 mb-6">
-                                                        <span className="text-blue-400 font-bold"><Icons.Safe /></span>
-                                                        <h3 className="text-xs uppercase font-black tracking-[0.2em] text-white">Mis Alcancías (Buckets)</h3>
+                                                <div className="mb-0 animate-slide">
+                                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-blue-400 font-bold"><Icons.Safe /></span>
+                                                            <h3 className="text-xs uppercase font-black tracking-[0.2em] text-white">Mis Alcancías (Buckets)</h3>
+                                                        </div>
+                                                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                                                            {currencyAnalysis.map((c, i) => (
+                                                                <div key={i} className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10 whitespace-nowrap">
+                                                                    <span className="text-sm">{c.icon}</span>
+                                                                    <span className="text-[10px] font-black">{formatARS(c.value)}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                         {(profile.categories || PILARES).ahorro.subcategorias.map((sub, i) => {
@@ -2358,6 +2414,73 @@
                                     </div>
                                 </div>
 
+                                {/* CENTRO DE PATRIMONIO */}
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-amber-500"><Icons.Safe /></span>
+                                        <h3 className="text-xs uppercase font-black tracking-[0.2em] text-white">Centro de Patrimonio</h3>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Distribución por Moneda */}
+                                        <div className="glass p-8 rounded-[2.5rem] border border-white/10 flex flex-col md:flex-row items-center gap-8">
+                                            <div className="relative w-40 h-40">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart>
+                                                        <Pie data={currencyAnalysis} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value" stroke="none">
+                                                            {currencyAnalysis.map((entry, i) => <Cell key={i} fill={entry.color} cornerRadius={8} />)}
+                                                        </Pie>
+                                                        <Tooltip formatter={(v) => formatARS(v)} contentStyle={{ background: '#111421', border: 'none', borderRadius: '15px' }} />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                                    <p className="text-[8px] uppercase font-black text-white/40">Activos</p>
+                                                    <p className="text-sm font-black text-white">{currencyAnalysis.length}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 space-y-3 w-full">
+                                                <p className="text-[10px] uppercase font-black text-gray-100/70 tracking-widest mb-2">Distribución por Moneda</p>
+                                                {currencyAnalysis.map((d, i) => (
+                                                    <div key={i} className="flex justify-between items-center text-[11px] font-bold">
+                                                        <span className="flex items-center gap-2"><span className="text-lg">{d.icon}</span> {d.name}</span>
+                                                        <span>{formatARS(d.value)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Foco Cripto (Solo si hay) */}
+                                        <div className="glass p-8 rounded-[2.5rem] border border-white/10">
+                                            <div className="flex justify-between items-center mb-6">
+                                                <h3 className="text-xs uppercase font-black tracking-widest text-white">Ecosistema Cripto</h3>
+                                                <span className="text-amber-500 text-xl font-black">₿</span>
+                                            </div>
+                                            {cryptoAnalysis.length > 0 ? (
+                                                <div className="space-y-4">
+                                                    {cryptoAnalysis.map((item, i) => (
+                                                        <div key={i}>
+                                                            <div className="flex justify-between text-[11px] font-bold text-white mb-2 uppercase tracking-tighter">
+                                                                <span>{item.name}</span>
+                                                                <span>{formatARS(item.value)}</span>
+                                                            </div>
+                                                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                                <div
+                                                                    className="h-full bg-gradient-to-r from-amber-500 to-orange-600 rounded-full transition-all duration-1000"
+                                                                    style={{ width: `${(item.value / totals.patrimonio) * 100}%` }}
+                                                                ></div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center h-full py-6 text-white/20">
+                                                    <p className="text-3xl mb-2">🛡️</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-center">Sin activos cripto registrados</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* DISTRIBUCIÓN Y DESGLOSE */}
                                     <div className="glass p-8 rounded-[2rem] border border-white/10">
@@ -2556,62 +2679,168 @@
                                     <h2 className="text-xl font-bold">{editingId ? '✏️ Editar' : '➕ Nuevo'} Movimiento</h2>
                                     <button onClick={resetForm} className="p-2 hover:bg-white/10 rounded-xl transition-all"><Icons.X /></button>
                                 </div>
-                                <form onSubmit={handleSave} className="space-y-5">
-                                    {/* SECCIÓN 1: CLASIFICACIÓN */}
-                                    <div className="pb-5 border-b border-white/10">
-                                        <label className="text-[10px] uppercase text-blue-400 font-bold tracking-wider block mb-4">Clasificación</label>
-                                        <div className="grid grid-cols-2 gap-4 mb-4">
-                                            <div>
-                                                <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Producto / Concepto</label>
-                                                <input type="text" required placeholder="Ej: Café" value={formData.articulo} onChange={e => setFormData({ ...formData, articulo: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-blue-500 transition-all" />
+                                <form onSubmit={handleSave} className="space-y-6">
+                                    {/* SELECTOR DE PESTAÑA (SMART TABS) */}
+                                    <div className="flex bg-white/5 p-1 rounded-2xl mb-8 gap-1">
+                                        {['gastos', 'ingresos', 'inversiones', 'ahorro'].map(tab => (
+                                            <button
+                                                key={tab}
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, formTab: tab, seccion: tab, subcategoria: (profile.categories || PILARES)[tab].subcategorias[0] || 'Otros' })}
+                                                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.formTab === tab ? 'bg-blue-600 text-white shadow-lg' : 'text-white/40 hover:bg-white/5'}`}
+                                            >
+                                                <span className="md:inline hidden mr-1">{PILARES[tab].icon}</span> {PILARES[tab].nombre}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* SECCIÓN 1: DATOS BÁSICOS (COMÚN) */}
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="col-span-2 md:col-span-1">
+                                                <label className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest block mb-1.5">{formData.formTab === 'inversiones' ? 'Título / Ticker' : 'Concepto / Artículo'}</label>
+                                                <input type="text" required placeholder={formData.formTab === 'inversiones' ? 'Ej: AAPL / BTC' : 'Ej: Café / Sueldo'} value={formData.articulo} onChange={e => setFormData({ ...formData, articulo: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-blue-500 transition-all font-bold" />
                                             </div>
-                                            <div>
-                                                <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Tienda / Lugar</label>
-                                                <input list="frequent-items" type="text" placeholder={formData.seccion === 'inversiones' ? 'Ej: AAPL' : 'Ej: Starbucks'} value={formData.tienda} onChange={e => setFormData({ ...formData, tienda: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-blue-500 transition-all" />
-                                                <datalist id="frequent-items">
-                                                    {(formData.seccion === 'inversiones' ? profile.inversionesFrecuentes : profile.tiendasFrecuentes)?.map(s => <option key={s} value={s} />)}
-                                                </datalist>
+                                            <div className="col-span-2 md:col-span-1">
+                                                <label className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest block mb-1.5">Moneda</label>
+                                                <div className="flex bg-white/5 border border-white/10 rounded-xl p-1 gap-1">
+                                                    {['ARS', 'USD', 'CRIPTO'].map(m => (
+                                                        <button key={m} type="button" onClick={() => setFormData({ ...formData, moneda: m })} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${formData.moneda === m ? 'bg-blue-600 text-white shadow-lg' : 'text-white/40 hover:bg-white/5'}`}>{m}</button>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4 mb-4">
+
+                                        <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Monto (ARS)</label>
-                                                <input type="number" required inputMode="decimal" placeholder="0" value={formData.monto} onChange={e => setFormData({ ...formData, monto: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-blue-500 transition-all font-mono" />
+                                                <label className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest block mb-1.5">Monto</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-white/30">{formData.moneda === 'ARS' ? '$' : formData.moneda === 'USD' ? 'u$s' : '₿'}</span>
+                                                    <input type="number" required inputMode="decimal" placeholder="0" value={formData.monto} onChange={e => setFormData({ ...formData, monto: e.target.value })} className="w-full p-4 pl-10 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-blue-500 transition-all font-mono font-bold" />
+                                                </div>
                                             </div>
                                             <div>
-                                                <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Fecha</label>
-                                                <input type="date" required value={formData.fecha} onChange={e => setFormData({ ...formData, fecha: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-blue-500 transition-all" />
+                                                <label className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest block mb-1.5">Fecha</label>
+                                                <input type="date" required value={formData.fecha} onChange={e => setFormData({ ...formData, fecha: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-blue-500 transition-all font-bold" />
                                             </div>
-                                        </div>
-                                        <div className="mb-4">
-                                            <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Pilar</label>
-                                            <select value={formData.seccion} onChange={e => setFormData({ ...formData, seccion: e.target.value, subcategoria: (profile.categories || PILARES)[e.target.value].subcategorias[0] || 'Otros' })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-blue-500 transition-all">
-                                                {Object.entries(profile.categories || PILARES).map(([key, val]) => <option key={key} value={key} className="bg-slate-900">{val.icon} {val.nombre}</option>)}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Subcategoría</label>
-                                            <select value={formData.subcategoria} onChange={e => setFormData({ ...formData, subcategoria: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-blue-500 transition-all">
-                                                {(profile.categories || PILARES)[formData.seccion].subcategorias.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
-                                            </select>
                                         </div>
                                     </div>
 
-                                    {/* SECCIÓN 2: DETALLES DE PAGO */}
-                                    <div className="border-t border-white/10 pt-5 mt-5">
-                                        <label className="text-[10px] uppercase text-blue-400 font-bold tracking-wider block mb-4">Método de Pago</label>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                            {MEDIOS_PAGO.map(m => (
-                                                <button key={m.id} type="button" onClick={() => setFormData({ ...formData, metodoPago: m.id })} className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-xs ${formData.metodoPago === m.id ? 'bg-blue-600/20 border-blue-500 text-white' : 'bg-white/5 border-white/10 text-gray-100/90 hover:bg-white/10'}`}>
-                                                    <span>{m.icon}</span>
-                                                    <span className="truncate">{m.nombre}</span>
-                                                </button>
-                                            ))}
-                                        </div>
+                                    {/* SECCIÓN 2: CAMPOS ESPECIALIZADOS POR TAB */}
+                                    <div className="pt-6 border-t border-white/10 space-y-5">
+
+                                        {/* FORM GASTOS */}
+                                        {formData.formTab === 'gastos' && (
+                                            <div className="space-y-4 animate-fade">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest block mb-1.5">Tienda / Lugar</label>
+                                                        <input list="frequent-stores" type="text" placeholder="Ej: Starbucks" value={formData.tienda} onChange={e => setFormData({ ...formData, tienda: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-blue-500 transition-all" />
+                                                        <datalist id="frequent-stores">{profile.tiendasFrecuentes?.map(s => <option key={s} value={s} />)}</datalist>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest block mb-1.5">Subcategoría</label>
+                                                        <select value={formData.subcategoria} onChange={e => setFormData({ ...formData, subcategoria: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-blue-500 transition-all font-bold">
+                                                            {(profile.categories || PILARES).gastos.subcategorias.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-4">
+                                                    <label className="text-[10px] uppercase text-blue-400 font-bold tracking-wider block">Método de Pago</label>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                        {MEDIOS_PAGO.map(m => (
+                                                            <button key={m.id} type="button" onClick={() => setFormData({ ...formData, metodoPago: m.id })} className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-xs ${formData.metodoPago === m.id ? 'bg-blue-600/20 border-blue-500 text-white' : 'bg-white/5 border-white/10 text-gray-100/90 hover:bg-white/10'}`}>
+                                                                <span>{m.icon}</span>
+                                                                <span className="truncate font-bold">{m.nombre}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* FORM INGRESOS */}
+                                        {formData.formTab === 'ingresos' && (
+                                            <div className="space-y-4 animate-fade">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest block mb-1.5">Fuente de Ingreso</label>
+                                                        <select value={formData.fuenteIngreso} onChange={e => setFormData({ ...formData, fuenteIngreso: e.target.value, subcategoria: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-blue-500 transition-all font-bold">
+                                                            {FUENTES_INGRESO.map(f => <option key={f} value={f} className="bg-slate-900">{f}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest block mb-1.5">Subcategoría (Pilar)</label>
+                                                        <select value={formData.subcategoria} onChange={e => setFormData({ ...formData, subcategoria: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-blue-500 transition-all font-bold">
+                                                            {(profile.categories || PILARES).ingresos.subcategorias.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* FORM INVERSIONES */}
+                                        {formData.formTab === 'inversiones' && (
+                                            <div className="space-y-4 animate-fade">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest block mb-1.5">Tipo de Inversión</label>
+                                                        <select value={formData.inversionTipo} onChange={e => setFormData({ ...formData, inversionTipo: e.target.value, subcategoria: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-blue-500 transition-all font-bold">
+                                                            {TIPO_INVERSIONES.map(t => <option key={t} value={t} className="bg-slate-900">{t}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest block mb-1.5">Plataforma</label>
+                                                        <select value={formData.plataforma} onChange={e => setFormData({ ...formData, plataforma: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-blue-500 transition-all font-bold">
+                                                            <option value="" className="bg-slate-900">Seleccionar...</option>
+                                                            {PLATAFORMAS_INV.map(p => <option key={p} value={p} className="bg-slate-900">{p}</option>)}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                {formData.moneda === 'CRIPTO' && (
+                                                    <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl space-y-4 animate-pop">
+                                                        <p className="text-[9px] uppercase font-black text-amber-500 tracking-[0.2em]">Detalles Cripto ₿</p>
+                                                        <div className="grid grid-cols-2 gap-4">
+                                                            <div>
+                                                                <label className="text-[8px] uppercase font-black text-white/60 block mb-1">Acción</label>
+                                                                <select value={formData.accionCripto} onChange={e => setFormData({ ...formData, accionCripto: e.target.value })} className="w-full p-3 bg-slate-900 border border-white/10 rounded-xl text-xs font-bold outline-none">
+                                                                    {ACCIONES_CRIPTO.map(a => <option key={a} value={a}>{a}</option>)}
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[8px] uppercase font-black text-white/60 block mb-1">Ticker (Ej: ETH)</label>
+                                                                <input type="text" placeholder="ETH" value={formData.cryptoTicker} onChange={e => setFormData({ ...formData, cryptoTicker: e.target.value.toUpperCase() })} className="w-full p-3 bg-slate-900 border border-white/10 rounded-xl text-xs font-mono font-bold outline-none" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* FORM AHORRO */}
+                                        {formData.formTab === 'ahorro' && (
+                                            <div className="space-y-4 animate-fade">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest block mb-1.5">Plataforma / Lugar</label>
+                                                        <select value={formData.plataforma} onChange={e => setFormData({ ...formData, plataforma: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-blue-500 transition-all font-bold">
+                                                            <option value="" className="bg-slate-900">Lugar del ahorro...</option>
+                                                            {PLATAFORMAS_AHORRO.map(p => <option key={p} value={p} className="bg-slate-900">{p}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest block mb-1.5">Alcancía (Categoría)</label>
+                                                        <select value={formData.subcategoria} onChange={e => setFormData({ ...formData, subcategoria: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-blue-500 transition-all font-bold">
+                                                            {(profile.categories || PILARES).ahorro.subcategorias.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* CAMPOS CONDICIONALES TARJETAS (SOLO SI NO ES EFECTIVO) */}
-                                    {formData.metodoPago !== 'efectivo' && (
+                                    {/* SECCIÓN 3: DETALLES DE PAGO (SOLO GASTOS) */}
+                                    {formData.formTab === 'gastos' && formData.metodoPago !== 'efectivo' && (
                                         <div className="glass p-4 rounded-xl space-y-4 animate-fade">
                                             <p className="text-xs text-white/60 flex items-center gap-2">💳 Configuración de Cuotas</p>
                                             <div className="grid grid-cols-3 gap-3">
@@ -2633,8 +2862,8 @@
                                         </div>
                                     )}
 
-                                    <button type="submit" disabled={isSaving} className={`w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3 ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}>
-                                        {isSaving ? <Icons.Loader /> : (editingId ? 'Actualizar' : 'Guardar')} Movimiento
+                                    <button type="submit" disabled={isSaving} className="w-full btn-premium p-4 rounded-2xl font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all">
+                                        {isSaving ? <Icons.Loader /> : (editingId ? 'Actualizar Movimiento' : 'Confirmar y Guardar')}
                                     </button>
                                 </form>
                             </div>
