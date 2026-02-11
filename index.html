@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Control Financiero ARS Pro</title>
+    <title>Nivo - Inteligencia Financiera</title>
+    <link rel="icon" type="image/png" href="imagen/favicon.png">
 
     <!-- React 18 Core -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -101,26 +102,17 @@
         }
 
         .glass {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(100px);
-            -webkit-backdrop-filter: blur(100px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            background: #1a1c2e;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
         }
 
         .glass-dark {
-            background: rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(120px);
-            -webkit-backdrop-filter: blur(120px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: #111421;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
         }
 
-        .white-card {
-            background: #ffffff;
-            border-radius: 1.5rem;
-            color: #000d1a;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        }
 
         .btn-premium {
             background: #0066ff;
@@ -133,42 +125,46 @@
             transform: translateY(-2px);
         }
 
-        .text-glow {
-            text-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
-        }
-
-        .blob1 {
+        /* BACKGROUND SISTEM NIVO */
+        .nivo-bg {
             position: fixed;
-            top: -20%;
-            left: -10%;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, transparent 70%);
-            pointer-events: none;
-            z-index: 0;
+            inset: 0;
+            z-index: -1;
+            background-size: cover;
+            background-position: center;
+            filter: blur(15px) brightness(0.7);
+            transform: scale(1.1);
+            /* Evita bordes blancos por blur */
+            transition: background-image 0.5s ease-in-out;
         }
 
-        .blob2 {
-            position: fixed;
-            bottom: -30%;
-            right: -15%;
-            width: 700px;
-            height: 700px;
-            background: radial-gradient(circle, rgba(236, 72, 153, 0.2) 0%, transparent 70%);
-            pointer-events: none;
-            z-index: 0;
+        /* Responsive Backgrounds */
+        @media (max-width: 768px) {
+            .nivo-bg {
+                background-image: url('fondo/24483412.png');
+            }
         }
 
+        @media (min-width: 769px) {
+            .nivo-bg {
+                background-image: url('fondo/2448341.png');
+            }
+        }
+
+        .glass-white {
+            background: #232742;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .blob1,
+        .blob2,
         .blob3 {
-            position: fixed;
-            top: 40%;
-            right: 20%;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(34, 211, 238, 0.15) 0%, transparent 70%);
-            pointer-events: none;
-            z-index: 0;
+            display: none !important;
         }
+
+        /* Reemplazamos los blobs por el fondo oficial */
+
 
         @keyframes fadeIn {
             from {
@@ -258,9 +254,7 @@
 </head>
 
 <body class="text-white overflow-x-hidden">
-    <div class="blob1"></div>
-    <div class="blob2"></div>
-    <div class="blob3"></div>
+    <div class="nivo-bg"></div>
     <div id="root" class="relative z-10"></div>
 
     <script type="text/babel">
@@ -284,8 +278,15 @@
         const CoachFinanciero = ({ transactions = [], totals = {}, profile = {} }) => {
             const fraseDiaria = useMemo(() => {
                 const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
-                return FRASES_MOTIVACIONALES[dayOfYear % FRASES_MOTIVACIONALES.length];
-            }, []);
+                const baseFrase = FRASES_MOTIVACIONALES[dayOfYear % FRASES_MOTIVACIONALES.length];
+
+                // Personalización
+                if (profile.nombre) {
+                    const hobbiesLine = profile.hobbies ? ` Incluso mientras disfrutas de ${profile.hobbies.split(',')[0]}, recuerda que el ahorro es libertad.` : '';
+                    return `Hola ${profile.nombre}, ${baseFrase}${hobbiesLine}`;
+                }
+                return baseFrase;
+            }, [profile.nombre, profile.hobbies]);
 
             const analisis = useMemo(() => {
                 const hoy = new Date();
@@ -305,10 +306,11 @@
                         return acc;
                     }, {});
                     const topCat = Object.entries(catMayor).sort((a, b) => b[1] - a[1])[0]?.[0] || 'tus consumos';
-                    mensaje = `¡Cuidado, ${profile.nombre || 'Jose'}! Tus gastos están subiendo rápido. ¿Podemos revisar la categoría ${topCat}?`;
+                    mensaje = `¡Atención, ${profile.nombre || 'Jose'}! Tus gastos en ${topCat} están subiendo. ¿Podemos optimizarlos para asegurar tu futuro?`;
                     tipo = 'warning';
                 } else if (totals.balance > 0) {
-                    mensaje = '¡Excelente gestión! Esta semana has guardado más de lo planeado. 🚀';
+                    const extra = profile.edad ? ` A tus ${profile.edad} años, este hábito es clave.` : '';
+                    mensaje = `¡Excelente gestión, ${profile.nombre || ''}! Has guardado más de lo planeado.${extra} 🚀`;
                     tipo = 'success';
                 }
 
@@ -316,7 +318,7 @@
                 const semanaGanadora = esDomingo && totals.balance > 0;
 
                 return { mensaje, tipo, semanaGanadora };
-            }, [transactions, totals.balance, profile.nombre]);
+            }, [transactions, totals.balance, profile.nombre, profile.edad]);
 
             return (
                 <div className="space-y-4 animate-fade">
@@ -324,30 +326,33 @@
                         <div className="glass-dark border-emerald-500/30 p-6 rounded-[2rem] text-center overflow-hidden relative group">
                             <div className="absolute inset-0 bg-emerald-500/5 animate-pulse"></div>
                             <h3 className="text-xl font-black text-emerald-400 mb-1">🎊 ¡SEMANA GANADORA! 🎊</h3>
-                            <p className="text-xs text-white/60">Has terminado la semana con balance positivo. ¡Sigue así!</p>
+                            <p className="text-sm font-bold text-white">Has terminado la semana con balance positivo. ¡Sigue así!</p>
                         </div>
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Inspiración */}
-                        <div className="glass p-6 rounded-[2.5rem] border-white/5 flex gap-5 items-center relative overflow-hidden group">
+                        <div className="bg-[#1a1c2e] p-6 rounded-[2.5rem] border border-blue-500/20 flex gap-5 items-center relative overflow-hidden group shadow-2xl">
                             <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                             <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-2xl shadow-inner border border-white/10">💡</div>
                             <div className="relative z-10">
                                 <p className="text-[10px] uppercase text-blue-400 font-black tracking-widest mb-1">Inspiración Diaria</p>
-                                <p className="text-xs font-bold italic text-white/90 leading-relaxed">"{fraseDiaria}"</p>
+                                <p className="text-sm font-bold italic text-white leading-relaxed">"{fraseDiaria}"</p>
                             </div>
                         </div>
 
                         {/* Análisis */}
                         {analisis.mensaje && (
-                            <div className={`glass p-6 rounded-[2.5rem] border-white/5 flex gap-5 items-center animate-slide relative overflow-hidden group ${analisis.tipo === 'warning' ? 'bg-rose-500/5' : 'bg-emerald-500/5'}`}>
+                            <div className={`p-6 rounded-[2.5rem] flex gap-5 items-center animate-slide relative overflow-hidden group shadow-2xl ${analisis.tipo === 'warning' ? 'bg-[#1a1c2e] border border-rose-500/30' : 'bg-[#1a1c2e] border border-emerald-500/30'}`}>
                                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner border ${analisis.tipo === 'warning' ? 'bg-rose-500/10 border-rose-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
                                     {analisis.tipo === 'warning' ? '⚠️' : '🎯'}
                                 </div>
                                 <div className="relative z-10">
-                                    <p className={`text-[10px] uppercase font-black tracking-widest mb-1 ${analisis.tipo === 'warning' ? 'text-rose-400' : 'text-emerald-400'}`}>Analista ARS Pro</p>
-                                    <p className="text-xs font-black text-white leading-tight">{analisis.mensaje}</p>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <p className={`text-[10px] uppercase font-black tracking-widest ${analisis.tipo === 'warning' ? 'text-rose-400' : 'text-emerald-400'}`}>Analista ARS Pro</p>
+                                        <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase text-white/50 border border-white/10`}>AI Coach</span>
+                                    </div>
+                                    <p className="text-sm font-bold text-white leading-tight">{analisis.mensaje}</p>
                                 </div>
                             </div>
                         )}
@@ -550,7 +555,7 @@
 
                             <div className="relative my-8">
                                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
-                                <div className="relative flex justify-center text-[9px] uppercase font-black tracking-widest text-white/20"><span className="bg-[#1e293b] px-4">Acceso rápido</span></div>
+                                <div className="relative flex justify-center text-[9px] uppercase font-black tracking-widest text-white/40"><span className="bg-[#1e293b] px-4">Acceso rápido</span></div>
                             </div>
 
                             <button
@@ -580,18 +585,18 @@
                 <p className="text-[8px] uppercase font-black tracking-[0.3em] mb-4 text-center">Cloud Diagnostics</p>
                 <div className="grid grid-cols-2 gap-4 text-[9px] font-mono">
                     <div className="glass p-3 rounded-xl border border-white/10">
-                        <p className="text-white/40 mb-1">Authenticated ID</p>
+                        <p className="text-gray-100/90 mb-1">Authenticated ID</p>
                         <p className="truncate">{user?.uid || 'Not Set'}</p>
                     </div>
                     <div className="glass p-3 rounded-xl border border-white/10">
-                        <p className="text-white/40 mb-1">Target Collection</p>
+                        <p className="text-gray-100/90 mb-1">Target Collection</p>
                         <p>usuarios/.../transacciones</p>
                     </div>
                 </div>
                 {!window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1') && (
                     <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center">
                         <p className="text-amber-400 font-bold">⚠️ ESTÁS EN PRODUCCIÓN (GitHub Pages)</p>
-                        <p className="text-white/40 mt-1">Los cambios locales (localhost:3000) NO se verán aquí hasta que se despliegue.</p>
+                        <p className="text-gray-100/90 mt-1">Los cambios locales (localhost:3000) NO se verán aquí hasta que se despliegue.</p>
                     </div>
                 )}
             </div>
@@ -601,7 +606,14 @@
             const [newStore, setNewStore] = useState('');
             const [newInversion, setNewInversion] = useState('');
             const [isEditingInfo, setIsEditingInfo] = useState(false);
-            const [tempInfo, setTempInfo] = useState({ nombre: '', cuil: '' });
+            const [tempInfo, setTempInfo] = useState({
+                nombre: profile.nombre || '',
+                apellido: profile.apellido || '',
+                email: profile.email || '',
+                nacimiento: profile.nacimiento || '',
+                edad: profile.edad || '',
+                hobbies: profile.hobbies || ''
+            });
 
             // Frase del día basada en la fecha
             const quote = useMemo(() => {
@@ -711,10 +723,29 @@
                 setProfile(prev => ({ ...prev, categories: updatedCats }));
             };
 
+            const handleUpdateMeta = (pilarId, sub, value) => {
+                const currentCats = profile.categories || PILARES;
+                const pilar = currentCats[pilarId];
+                const updatedCats = {
+                    ...currentCats,
+                    [pilarId]: {
+                        ...pilar,
+                        metas: {
+                            ...(pilar.metas || {}),
+                            [sub]: parseFloat(value) || 0
+                        }
+                    }
+                };
+                setProfile(prev => ({ ...prev, categories: updatedCats }));
+            };
+
             const handleSaveInfo = () => {
-                setProfile(prev => ({ ...prev, ...tempInfo }));
+                setProfile(prev => ({
+                    ...prev,
+                    ...tempInfo
+                }));
                 setIsEditingInfo(false);
-                showToast('Información perfil actualizada');
+                showToast('Perfíl Nivo actualizado');
             };
 
             return (
@@ -733,32 +764,65 @@
                     {/* Información Personal */}
                     <div className="glass p-6 rounded-[2rem] border-white/5">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xs uppercase text-white/40 font-bold tracking-widest flex items-center gap-2">
+                            <h3 className="text-xs uppercase text-gray-100/90 font-bold tracking-widest flex items-center gap-2">
                                 <span className="text-blue-400">📝</span> Datos Personales
                             </h3>
                             {!isEditingInfo && (
-                                <button onClick={() => { setTempInfo({ nombre: profile.nombre, cuil: profile.cuil }); setIsEditingInfo(true); }} className="text-blue-400 text-[10px] font-bold uppercase tracking-widest">Editar</button>
+                                <button onClick={() => {
+                                    setTempInfo({
+                                        nombre: profile.nombre || '',
+                                        apellido: profile.apellido || '',
+                                        email: profile.email || user.email,
+                                        nacimiento: profile.nacimiento || '',
+                                        edad: profile.edad || '',
+                                        hobbies: profile.hobbies || ''
+                                    });
+                                    setIsEditingInfo(true);
+                                }} className="text-blue-400 text-[10px] font-black uppercase tracking-widest hover:text-blue-300 transition-colors">Editar Perfil</button>
                             )}
                         </div>
 
                         {isEditingInfo ? (
                             <div className="space-y-4 animate-fade">
-                                <input type="text" value={tempInfo.nombre} onChange={e => setTempInfo({ ...tempInfo, nombre: e.target.value })} placeholder="Nombre Completo" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm outline-none focus:border-blue-500 transition-all" />
-                                <input type="text" value={tempInfo.cuil} onChange={e => setTempInfo({ ...tempInfo, cuil: e.target.value })} placeholder="CUIL/CUIT" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm outline-none focus:border-blue-500 transition-all" />
-                                <div className="flex gap-3">
-                                    <button onClick={() => setIsEditingInfo(false)} className="flex-1 py-4 rounded-2xl border border-white/10 text-[10px] font-bold uppercase tracking-widest">Cancelar</button>
-                                    <button onClick={handleSaveInfo} className="flex-1 btn-premium text-white py-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest">Guardar</button>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <input type="text" value={tempInfo.nombre} onChange={e => setTempInfo({ ...tempInfo, nombre: e.target.value })} placeholder="Nombre" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm outline-none focus:border-blue-500 transition-all font-bold" />
+                                    <input type="text" value={tempInfo.apellido} onChange={e => setTempInfo({ ...tempInfo, apellido: e.target.value })} placeholder="Apellido" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm outline-none focus:border-blue-500 transition-all font-bold" />
+                                </div>
+                                <input type="email" value={tempInfo.email} onChange={e => setTempInfo({ ...tempInfo, email: e.target.value })} placeholder="Correo Electrónico" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm outline-none focus:border-blue-500 transition-all font-bold" />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] uppercase text-gray-100/90 mb-2 block px-2">Fecha Nacimiento</label>
+                                        <input type="date" value={tempInfo.nacimiento} onChange={e => setTempInfo({ ...tempInfo, nacimiento: e.target.value })} className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm outline-none focus:border-blue-500 transition-all font-bold" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] uppercase text-gray-100/90 mb-2 block px-2">Edad</label>
+                                        <input type="number" value={tempInfo.edad} onChange={e => setTempInfo({ ...tempInfo, edad: e.target.value })} placeholder="Edad" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm outline-none focus:border-blue-500 transition-all font-bold" />
+                                    </div>
+                                </div>
+                                <textarea value={tempInfo.hobbies} onChange={e => setTempInfo({ ...tempInfo, hobbies: e.target.value })} placeholder="Tus Hobbies (Ej: Fútbol, Programación, Viajar)" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm outline-none focus:border-blue-500 transition-all font-bold h-24" />
+
+                                <div className="flex gap-3 pt-2">
+                                    <button onClick={() => setIsEditingInfo(false)} className="flex-1 py-4 rounded-2xl border border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all">Cancelar</button>
+                                    <button onClick={handleSaveInfo} className="flex-1 btn-premium text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20">Guardar Cambios</button>
                                 </div>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                    <p className="text-[9px] uppercase text-white/30 font-bold mb-1">Nombre</p>
-                                    <p className="font-bold text-white tracking-tight">{profile.nombre || 'No configurado'}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
+                                    <p className="text-[9px] uppercase text-gray-100/70 font-bold mb-1">Nombre Completo</p>
+                                    <p className="font-black text-white tracking-tight">{profile.nombre} {profile.apellido || ''}</p>
                                 </div>
-                                <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                    <p className="text-[9px] uppercase text-white/30 font-bold mb-1">CUIL/CUIT</p>
-                                    <p className="font-bold text-white tracking-tight font-mono">{profile.cuil || 'No configurado'}</p>
+                                <div className="bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
+                                    <p className="text-[9px] uppercase text-gray-100/70 font-bold mb-1">Email de Contacto</p>
+                                    <p className="font-black text-white tracking-tight truncate">{profile.email || user.email}</p>
+                                </div>
+                                <div className="bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
+                                    <p className="text-[9px] uppercase text-gray-100/70 font-bold mb-1">Edad / Nacimiento</p>
+                                    <p className="font-black text-white tracking-tight">{profile.edad ? `${profile.edad} años` : 'No set'} {profile.nacimiento ? ` (${profile.nacimiento})` : ''}</p>
+                                </div>
+                                <div className="md:col-span-2 lg:col-span-3 bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
+                                    <p className="text-[9px] uppercase text-gray-100/70 font-bold mb-1">Intereses y Hobbies</p>
+                                    <p className="font-bold text-white tracking-tight italic opacity-80">{profile.hobbies || 'Cuentanos tus hobbies para personalizar tus consejos.'}</p>
                                 </div>
                             </div>
                         )}
@@ -778,7 +842,7 @@
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* PERFORMANCE CARDS */}
                         <div className="glass p-6 rounded-[2rem] border border-white/10">
-                            <p className="text-[10px] uppercase text-white/40 font-bold mb-3">Rendimiento Ahorro</p>
+                            <p className="text-[10px] uppercase text-gray-100/90 font-bold mb-3">Rendimiento Ahorro</p>
                             <div className="flex items-end justify-between">
                                 <p className="text-2xl font-black">{formatARS(totals.ahorro + totals.inversiones)}</p>
                                 <span className={`text-xs font-bold px-2 py-1 rounded-lg ${comparisonData.ahorroPct >= 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-rose-400 bg-rose-400/10'}`}>
@@ -788,7 +852,7 @@
                         </div>
 
                         <div className="glass p-6 rounded-[2rem] border border-white/10">
-                            <p className="text-[10px] uppercase text-white/40 font-bold mb-3">Eficiencia Gastos</p>
+                            <p className="text-[10px] uppercase text-gray-100/90 font-bold mb-3">Eficiencia Gastos</p>
                             <div className="flex items-end justify-between">
                                 <p className="text-2xl font-black">{formatARS(totals.gastos)}</p>
                                 <span className={`text-xs font-bold px-2 py-1 rounded-lg ${comparisonData.gastosPct <= 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-rose-400 bg-rose-400/10'}`}>
@@ -798,12 +862,12 @@
                         </div>
 
                         <div className="glass p-6 rounded-[2rem] border border-white/10">
-                            <p className="text-[10px] uppercase text-white/40 font-bold mb-3">Estado Financiero</p>
+                            <p className="text-[10px] uppercase text-gray-100/90 font-bold mb-3">Estado Financiero</p>
                             <div className="flex items-center gap-3">
                                 <div className={`w-3 h-3 rounded-full ${totals.balance >= 0 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : 'bg-rose-400 shadow-[0_0_10px_rgba(251,113,133,0.5)]'}`}></div>
                                 <p className="text-sm font-bold">{totals.balance >= 0 ? 'Saludable' : 'En riesgo'}</p>
                             </div>
-                            <p className="text-[10px] text-white/30 mt-2">{insights[0]?.text || "Sigue registrando para más insights."}</p>
+                            <p className="text-[10px] text-gray-100/70 mt-2">{insights[0]?.text || "Sigue registrando para más insights."}</p>
                         </div>
                     </div>
 
@@ -812,7 +876,7 @@
                         <div className="flex justify-between items-center mb-4">
                             <div>
                                 <h3 className="text-xs font-black uppercase tracking-widest text-blue-400">Nube ARS Pro</h3>
-                                <p className="text-[9px] text-white/30 uppercase mt-1">ID: {user?.uid}</p>
+                                <p className="text-[9px] text-gray-100/70 uppercase mt-1">ID: {user?.uid}</p>
                             </div>
                             <div className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400 flex items-center gap-1">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizado
@@ -821,16 +885,16 @@
 
                         <div className="grid grid-cols-2 gap-3 mb-4">
                             <div className="p-3 rounded-xl bg-black/20 border border-white/5">
-                                <p className="text-[8px] text-white/20 uppercase font-black mb-1">Registros en Nube</p>
+                                <p className="text-[8px] text-white/40 uppercase font-black mb-1">Registros en Nube</p>
                                 <p className="text-xs font-bold">{syncInfo.cloudCount} Movs</p>
                             </div>
                             <div className="p-3 rounded-xl bg-black/20 border border-white/5">
-                                <p className="text-[8px] text-white/20 uppercase font-black mb-1">Backup</p>
+                                <p className="text-[8px] text-white/40 uppercase font-black mb-1">Backup</p>
                                 <p className="text-xs font-bold text-blue-400">En tiempo real</p>
                             </div>
                         </div>
                         <div className="flex flex-col gap-2">
-                            <p className="text-[8px] text-white/20 text-center uppercase tracking-tighter italic mb-2">Tus datos se guardan instantáneamente al detectar cambios.</p>
+                            <p className="text-[8px] text-white/40 text-center uppercase tracking-tighter italic mb-2">Tus datos se guardan instantáneamente al detectar cambios.</p>
                             <button
                                 onClick={onDeleteAccount}
                                 className="w-full py-3 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-[9px] font-black uppercase text-rose-400 tracking-widest transition-all"
@@ -846,18 +910,18 @@
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-xs uppercase text-blue-400 font-black tracking-widest">Datos para Facturas</h3>
                                 {!isEditingInfo && (
-                                    <button onClick={() => { setTempInfo({ nombre: profile.nombre || '', cuil: profile.cuil || '' }); setIsEditingInfo(true); }} className="text-[10px] text-white/40 hover:text-white underline font-bold uppercase">Editar</button>
+                                    <button onClick={() => { setTempInfo({ nombre: profile.nombre || '', cuil: profile.cuil || '' }); setIsEditingInfo(true); }} className="text-[10px] text-gray-100/90 hover:text-white underline font-bold uppercase">Editar</button>
                                 )}
                             </div>
 
                             {isEditingInfo ? (
                                 <div className="space-y-4 animate-fade">
                                     <div>
-                                        <label className="text-[9px] uppercase text-white/40 font-bold block mb-2 px-1">Nombre / Razón Social</label>
+                                        <label className="text-[9px] uppercase text-gray-100/90 font-bold block mb-2 px-1">Nombre / Razón Social</label>
                                         <input type="text" value={tempInfo.nombre} onChange={e => setTempInfo({ ...tempInfo, nombre: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleSaveInfo()} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 transition-all font-medium text-sm" />
                                     </div>
                                     <div>
-                                        <label className="text-[9px] uppercase text-white/40 font-bold block mb-2 px-1">CUIL / CUIT</label>
+                                        <label className="text-[9px] uppercase text-gray-100/90 font-bold block mb-2 px-1">CUIL / CUIT</label>
                                         <input type="text" value={tempInfo.cuil} onChange={e => setTempInfo({ ...tempInfo, cuil: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleSaveInfo()} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 transition-all font-medium text-sm" />
                                     </div>
                                     <div className="flex gap-3 mt-6">
@@ -868,11 +932,11 @@
                             ) : (
                                 <div className="space-y-6">
                                     <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                        <p className="text-[9px] uppercase text-white/30 font-bold mb-1">Nombre / Razón Social</p>
+                                        <p className="text-[9px] uppercase text-gray-100/70 font-bold mb-1">Nombre / Razón Social</p>
                                         <p className="text-lg font-black">{profile.nombre || 'No configurado'}</p>
                                     </div>
                                     <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                        <p className="text-[9px] uppercase text-white/30 font-bold mb-1">CUIL / CUIT</p>
+                                        <p className="text-[9px] uppercase text-gray-100/70 font-bold mb-1">CUIL / CUIT</p>
                                         <p className="text-lg font-black font-mono">{profile.cuil || 'No configurado'}</p>
                                     </div>
                                 </div>
@@ -899,15 +963,15 @@
 
                             <div className="flex-1 overflow-y-auto max-h-[300px] custom-scroll space-y-2 pr-2">
                                 {(!profile.tiendasFrecuentes || profile.tiendasFrecuentes.length === 0) ? (
-                                    <p className="text-center py-12 text-white/20 text-xs font-bold tracking-widest uppercase">No hay tiendas favoritas</p>
+                                    <p className="text-center py-12 text-white/40 text-xs font-bold tracking-widest uppercase">No hay tiendas favoritas</p>
                                 ) : (
                                     profile.tiendasFrecuentes.map((store, i) => (
-                                        <div key={i} className="flex justify-between items-center p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all group animate-stagger" style={{ animationDelay: `${i * 50}ms` }}>
+                                        <div key={i} className="flex justify-between items-center p-4 bg-gray-900/60 backdrop-blur-md hover:bg-gray-900/80 rounded-2xl border border-white/10 transition-all group animate-stagger" style={{ animationDelay: `${i * 50}ms` }}>
                                             <div className="flex items-center gap-3">
-                                                <span className="text-blue-400"><Icons.Store /></span>
-                                                <span className="text-sm font-bold">{store}</span>
+                                                <span className="text-blue-400 font-bold"><Icons.Store /></span>
+                                                <span className="text-sm font-bold text-white">{store}</span>
                                             </div>
-                                            <button onClick={() => handleRemoveStore(store)} className="opacity-0 group-hover:opacity-100 p-2 text-white/20 hover:text-rose-400 transition-all">
+                                            <button onClick={() => handleRemoveStore(store)} className="opacity-0 group-hover:opacity-100 p-2 text-gray-100/90 hover:text-rose-400 transition-all">
                                                 <Icons.X />
                                             </button>
                                         </div>
@@ -936,15 +1000,15 @@
 
                             <div className="flex-1 overflow-y-auto max-h-[300px] custom-scroll space-y-2 pr-2">
                                 {(!profile.inversionesFrecuentes || profile.inversionesFrecuentes.length === 0) ? (
-                                    <p className="text-center py-12 text-white/20 text-xs font-bold tracking-widest uppercase">No hay inversiones guardadas</p>
+                                    <p className="text-center py-12 text-white/40 text-xs font-bold tracking-widest uppercase">No hay inversiones guardadas</p>
                                 ) : (
                                     profile.inversionesFrecuentes.map((inv, i) => (
-                                        <div key={i} className="flex justify-between items-center p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all group animate-stagger" style={{ animationDelay: `${i * 50}ms` }}>
+                                        <div key={i} className="flex justify-between items-center p-4 bg-gray-900/60 backdrop-blur-md hover:bg-gray-900/80 rounded-2xl border border-white/10 transition-all group animate-stagger" style={{ animationDelay: `${i * 50}ms` }}>
                                             <div className="flex items-center gap-3">
-                                                <span className="text-blue-400"><Icons.Trend /></span>
-                                                <span className="text-sm font-bold">{inv}</span>
+                                                <span className="text-blue-400 font-bold"><Icons.Trend /></span>
+                                                <span className="text-sm font-bold text-white">{inv}</span>
                                             </div>
-                                            <button onClick={() => handleRemoveInversion(inv)} className="opacity-0 group-hover:opacity-100 p-2 text-white/20 hover:text-rose-400 transition-all">
+                                            <button onClick={() => handleRemoveInversion(inv)} className="opacity-0 group-hover:opacity-100 p-2 text-gray-100/90 hover:text-rose-400 transition-all">
                                                 <Icons.X />
                                             </button>
                                         </div>
@@ -998,14 +1062,35 @@
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {(profile.categories || PILARES)[selectedPilar]?.subcategorias.map((sub, i) => (
-                                    <div key={i} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5 group hover:bg-white/10 transition-all">
-                                        <span className="text-xs font-bold truncate pr-2">{sub}</span>
-                                        <button onClick={() => handleRemoveSubcategory(sub)} className="p-1 text-white/20 hover:text-rose-400 transition-all opacity-0 group-hover:opacity-100">
-                                            <Icons.X />
-                                        </button>
-                                    </div>
-                                ))}
+                                {(profile.categories || PILARES)[selectedPilar]?.subcategorias.map((sub, i) => {
+                                    const pilar = (profile.categories || PILARES)[selectedPilar];
+                                    const isAhorro = pilar.tipo === 'ahorro';
+                                    return (
+                                        <div key={i} className="flex flex-col gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-black uppercase tracking-wider truncate pr-2">{sub}</span>
+                                                <button onClick={() => handleRemoveSubcategory(sub)} className="p-1 text-white/40 hover:text-rose-400 transition-all opacity-0 group-hover:opacity-100">
+                                                    <Icons.X />
+                                                </button>
+                                            </div>
+                                            {isAhorro && (
+                                                <div className="pt-2 border-t border-white/5">
+                                                    <p className="text-[8px] uppercase font-black text-blue-400 mb-1.5 tracking-widest">Meta de Ahorro</p>
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-white/30">$</span>
+                                                        <input
+                                                            type="number"
+                                                            placeholder="Monto"
+                                                            value={pilar.metas?.[sub] || ''}
+                                                            onChange={(e) => handleUpdateMeta(selectedPilar, sub, e.target.value)}
+                                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-6 pr-3 text-[10px] outline-none focus:border-blue-500 font-bold transition-all"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
@@ -1017,21 +1102,21 @@
                                 <h3 className="text-xl font-black mb-6 text-center">Nuevo Pilar</h3>
                                 <div className="space-y-6">
                                     <div>
-                                        <label className="text-[10px] uppercase text-white/40 font-bold block mb-2">Nombre del Pilar</label>
+                                        <label className="text-[10px] uppercase text-gray-100/90 font-bold block mb-2">Nombre del Pilar</label>
                                         <input type="text" placeholder="Ej: Mascotas" value={newPilar.nombre} onChange={e => setNewPilar({ ...newPilar, nombre: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleAddPilar()} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 transition-all font-bold" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-[10px] uppercase text-white/40 font-bold block mb-2">Icono (Emoji)</label>
+                                            <label className="text-[10px] uppercase text-gray-100/90 font-bold block mb-2">Icono (Emoji)</label>
                                             <input type="text" placeholder="🐶" value={newPilar.icon} onChange={e => setNewPilar({ ...newPilar, icon: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleAddPilar()} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-center text-xl outline-none focus:border-blue-500 transition-all" />
                                         </div>
                                         <div>
-                                            <label className="text-[10px] uppercase text-white/40 font-bold block mb-2">Color</label>
+                                            <label className="text-[10px] uppercase text-gray-100/90 font-bold block mb-2">Color</label>
                                             <input type="color" value={newPilar.color} onChange={e => setNewPilar({ ...newPilar, color: e.target.value })} className="w-full h-[58px] p-2 bg-white/5 border border-white/10 rounded-2xl cursor-pointer" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-[10px] uppercase text-white/40 font-bold block mb-2">Tipo de Impacto</label>
+                                        <label className="text-[10px] uppercase text-gray-100/90 font-bold block mb-2">Tipo de Impacto</label>
                                         <select value={newPilar.tipo} onChange={e => setNewPilar({ ...newPilar, tipo: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleAddPilar()} className="w-full p-4 bg-slate-900 border border-white/10 rounded-2xl outline-none focus:border-blue-500 transition-all font-bold appearance-none cursor-pointer">
                                             <option value="gasto">Gasto</option>
                                             <option value="ingreso">Ingreso</option>
@@ -1065,7 +1150,13 @@
 
             // Perfil por defecto
             const DEFAULT_PROFILE = {
-                nombre: '', cuil: '',
+                nombre: '',
+                apellido: '',
+                email: '',
+                nacimiento: '',
+                edad: '',
+                hobbies: '',
+                cuil: '',
                 tiendasFrecuentes: [],
                 inversionesFrecuentes: [],
                 categories: { ...PILARES }
@@ -1514,7 +1605,9 @@
                 });
 
                 const tarjetas = sum(byPilar.tarjetas);
-                return { ingresos, gastos, tarjetas, ahorro, inversiones, balance: ingresos - gastos, patrimonio: ahorro + inversiones };
+                // Dinero Disponible = Ingresos - Gastos - Ahorro - Inversiones (Liquidez real)
+                const balance = ingresos - gastos - ahorro - inversiones;
+                return { ingresos, gastos, tarjetas, ahorro, inversiones, balance, patrimonio: ahorro + inversiones };
             }, [byPilar, profile.categories]);
 
             const alertas = useMemo(() => {
@@ -1545,6 +1638,46 @@
                 ].filter(d => d.value > 0);
             }, [byPilar, profile.categories]);
 
+            const dashboardPieData = useMemo(() => {
+                const currentCats = profile.categories || PILARES;
+                return [
+                    { name: 'Ingresos', value: totals.ingresos, color: '#10b981' },
+                    { name: 'Gastos', value: totals.gastos, color: '#f43f5e' },
+                    { name: 'Inversiones', value: totals.inversiones + totals.ahorro, color: '#3b82f6' }
+                ].filter(d => d.value > 0);
+            }, [totals]);
+
+            const subcategoriesAnalysis = useMemo(() => {
+                const groups = { gasto: {}, ingreso: {}, inversion: {}, ahorro: {} };
+                const filteredByTime = comparisonData.filtered || [];
+
+                filteredByTime.forEach(t => {
+                    const type = t.tipo;
+                    if (groups[type]) {
+                        const sub = t.subcategoria || 'Otros';
+                        groups[type][sub] = (groups[type][sub] || 0) + (t.monto || 0);
+                    }
+                });
+
+                const sortAndMap = (obj) => Object.entries(obj)
+                    .map(([name, value]) => ({ name, value }))
+                    .sort((a, b) => b.value - a.value);
+
+                return {
+                    gasto: sortAndMap(groups.gasto),
+                    ingreso: sortAndMap(groups.ingreso),
+                    inversion: sortAndMap(groups.inversion),
+                    ahorro: sortAndMap(groups.ahorro)
+                };
+            }, [comparisonData.filtered]);
+
+            const savingsMetrics = useMemo(() => {
+                const income = totals.ingresos || 0;
+                const savings = (totals.ahorro || 0) + (totals.inversiones || 0);
+                const ratio = income > 0 ? (savings / income) * 100 : 0;
+                return { ratio, totalSavings: savings };
+            }, [totals]);
+
             const trendData = useMemo(() => {
                 const grouped = {};
                 (filteredByTime || []).forEach(t => {
@@ -1570,22 +1703,22 @@
 
             const renderList = (items = [], showCuotas = false) => (
                 (!items || items.length === 0) ? (
-                    <div className="text-center py-12 text-white/30 glass rounded-[2.5rem] border-white/5">
+                    <div className="text-center py-12 text-gray-100/70 glass rounded-[2.5rem] border-white/5">
                         <p className="text-4xl mb-3">📭</p>
                         <p className="text-sm font-bold uppercase tracking-widest opacity-50">Sin movimientos</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
                         {[...items].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '')).map((t, i) => (
-                            <div key={t.id} className="glass p-5 rounded-[2rem] border-white/5 flex justify-between items-center group hover:bg-white/10 transition-all cursor-pointer animate-stagger" style={{ animationDelay: `${i * 50}ms` }} onClick={() => handleEdit(t)}>
+                            <div key={t.id} className="bg-[#121421] p-5 rounded-[2rem] border border-white/10 flex justify-between items-center group hover:bg-[#1a1c2e] transition-all cursor-pointer animate-stagger shadow-xl" style={{ animationDelay: `${i * 50}ms` }} onClick={() => handleEdit(t)}>
                                 <div className="flex items-center gap-5">
                                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-inner bg-slate-50 border border-black/5">
                                         {t.metodoPago && t.metodoPago !== 'efectivo' ? '💳' : ((profile.categories || PILARES)[t.seccion]?.icon || '📝')}
                                     </div>
                                     <div>
-                                        <p className="font-bold text-sm tracking-tight text-white/90">{t.articulo}</p>
-                                        <p className="text-[10px] text-white/40 font-bold uppercase tracking-wider mt-0.5">
-                                            {t.tienda ? `${t.tienda} • ` : ''}
+                                        <p className="font-bold text-sm tracking-tight text-white">{t.articulo}</p>
+                                        <p className="text-[10px] text-gray-100/70 font-bold uppercase tracking-wider mt-0.5">
+                                            {t.tienda ? <span className="text-blue-400">{t.tienda} • </span> : ''}
                                             {t.subcategoria} • {t.fecha}
                                         </p>
                                     </div>
@@ -1594,7 +1727,7 @@
                                     <span className={`font-black tracking-tighter text-base ${t.tipo === 'ingreso' ? 'text-emerald-400 text-glow' : t.tipo === 'ahorro' || t.tipo === 'inversion' ? 'text-blue-400 text-glow' : 'text-rose-400'}`}>
                                         {t.tipo === 'ingreso' ? '+' : '-'}{formatARS(t.monto)}
                                     </span>
-                                    <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm(t.id); }} className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-rose-500 transition-all p-2"><Icons.Trash /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm(t.id); }} className="opacity-0 group-hover:opacity-100 text-white/40 hover:text-rose-500 transition-all p-2"><Icons.Trash /></button>
                                 </div>
                             </div>
                         ))}
@@ -1626,7 +1759,7 @@
                         <div className="absolute inset-0 flex items-center justify-center text-2xl">💵</div>
                     </div>
                     <h1 className="mt-8 text-xl font-black tracking-[0.3em] text-white/90 uppercase">ARS Pro</h1>
-                    <p className="mt-2 text-[10px] font-bold text-white/20 uppercase tracking-widest animate-pulse">Iniciando sesión segura...</p>
+                    <p className="mt-2 text-[10px] font-bold text-white/40 uppercase tracking-widest animate-pulse">Iniciando sesión segura...</p>
                 </div>
             );
             return (
@@ -1663,10 +1796,10 @@
                     {/* SIDEBAR DESKTOP */}
                     <nav className="hidden md:flex fixed left-0 top-0 h-screen w-64 glass-dark flex-col p-8 z-40 border-r border-white/5">
                         <div className="flex items-center gap-3 mb-10">
-                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-xl shadow-[0_0_20px_rgba(0,102,255,0.3)]">💵</div>
-                            <h1 className="text-xl font-black tracking-tighter">Control ARS</h1>
+                            <img src="imagen/nivo-logo-blank.png" alt="Nivo Logo" className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
+                            <h1 className="text-2xl font-black tracking-tighter bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">Nivo</h1>
                         </div>
-                        <p className="text-[10px] text-white/40 uppercase tracking-widest mb-8">Versión Pro</p>
+                        <p className="text-[10px] text-gray-100/90 uppercase tracking-widest mb-8">Versión Pro</p>
                         <div className="flex-1 space-y-2">
                             {TABS.map(tab => (
                                 <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-medium transition-all ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'text-white/60 hover:bg-white/10'}`}>
@@ -1674,15 +1807,15 @@
                                 </button>
                             ))}
                         </div>
-                        <p className="text-[10px] text-white/30 text-center">UID: {user?.uid?.slice(0, 8)}</p>
+                        <p className="text-[10px] text-gray-100/70 text-center">UID: {user?.uid?.slice(0, 8)}</p>
                     </nav>
 
                     {/* HEADER MOBILE */}
                     <header className="md:hidden glass-dark p-5 sticky top-0 z-30">
                         <div className="flex justify-between items-center">
-                            <div>
-                                <h1 className="text-lg font-bold">💵 Control ARS Pro</h1>
-                                <p className="text-[10px] text-white/40">Balance: <span className={totals.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{formatARS(totals.balance)}</span></p>
+                            <div className="flex items-center gap-2">
+                                <img src="imagen/nivo-logo-blank.png" alt="Nivo Logo" className="w-7 h-7 object-contain" />
+                                <h1 className="text-lg font-bold">Nivo Pro</h1>
                             </div>
                         </div>
                     </header>
@@ -1707,7 +1840,7 @@
                                 <span className="text-white tracking-wide">
                                     {timeFilter === 'compare_mes' ? `Comparar Meses` : timeFilter === 'compare_dia' ? `Comparar Días` : `Ver: ${timeFilter === 'dia' ? 'Hoy' : timeFilter === 'semana' ? 'Esta Semana' : 'Este Mes'}`}
                                 </span>
-                                <span className="text-white/40 transition-transform duration-500" style={{ transform: showFilterMenu ? 'rotate(180deg)' : 'rotate(0deg)' }}><Icons.ChevronDown /></span>
+                                <span className="text-gray-100/90 transition-transform duration-500" style={{ transform: showFilterMenu ? 'rotate(180deg)' : 'rotate(0deg)' }}><Icons.ChevronDown /></span>
                             </button>
 
                             {showFilterMenu && (
@@ -1719,7 +1852,7 @@
                                         </div>
 
                                         <div className="space-y-1">
-                                            <p className="px-4 py-2 text-[9px] uppercase text-white/20 font-bold tracking-widest">Filtros Rápidos</p>
+                                            <p className="px-4 py-2 text-[9px] uppercase text-white/40 font-bold tracking-widest">Filtros Rápidos</p>
                                             {[
                                                 { id: 'dia', label: 'Hoy vs Ayer', desc: 'Vista diaria rápida', icon: '☀️' },
                                                 { id: 'semana', label: 'Semana vs Pasada', desc: 'Ciclo de 7 días', icon: '📆' },
@@ -1729,12 +1862,12 @@
                                                     <span className="text-xl">{opt.icon}</span>
                                                     <div>
                                                         <p className={`text-xs font-bold ${timeFilter === opt.id ? 'text-white' : 'text-white/60'}`}>{opt.label}</p>
-                                                        <p className="text-[9px] text-white/30 font-medium">{opt.desc}</p>
+                                                        <p className="text-[9px] text-gray-100/70 font-medium">{opt.desc}</p>
                                                     </div>
                                                 </button>
                                             ))}
 
-                                            <p className="px-4 py-2 mt-4 text-[9px] uppercase text-white/20 font-bold tracking-widest">Comparativa Personalizada</p>
+                                            <p className="px-4 py-2 mt-4 text-[9px] uppercase text-white/40 font-bold tracking-widest">Comparativa Personalizada</p>
 
                                             {/* MODO COMPARAR MESES */}
                                             <div className={`p-4 rounded-2xl transition-all ${timeFilter === 'compare_mes' ? 'bg-purple-600/10 ring-1 ring-purple-500/30' : 'hover:bg-white/5'}`}>
@@ -1772,6 +1905,13 @@
                         {/* DASHBOARD PREMIUM */}
                         {activeTab === 'dashboard' && (
                             <div className="space-y-8 animate-fade">
+                                {/* COACH DE FINANZAS */}
+                                <CoachFinanciero
+                                    transactions={transactions}
+                                    totals={totals}
+                                    profile={profile}
+                                />
+
                                 {/* HERO SECTION: BALANCE TOTAL */}
                                 <div className="glass p-8 rounded-[2.5rem] relative overflow-hidden group">
                                     <div className="absolute top-0 right-0 p-12 opacity-5 scale-150 rotate-12">
@@ -1780,11 +1920,11 @@
                                     <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
                                         <div>
                                             <p className="text-[10px] uppercase text-blue-400 font-extrabold tracking-[0.2em] mb-3">Dinero Total Disponible</p>
-                                            <h2 className="text-5xl font-black text-white tracking-tighter mb-2 text-glow">
+                                            <h2 className="text-5xl font-black text-white tracking-tighter mb-2 drop-shadow-sm">
                                                 {formatARS(sessionStartAmount + totals.balance)}
                                             </h2>
                                             <div className="flex items-center gap-3">
-                                                <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Rendimiento sesión</span>
+                                                <span className="text-[10px] text-gray-100/90 font-bold uppercase tracking-widest">Rendimiento sesión (sin contar inversiones)</span>
                                                 <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${totals.balance >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
                                                     {totals.balance >= 0 ? '↗' : '↘'} {formatARS(Math.abs(totals.balance))}
                                                 </span>
@@ -1800,9 +1940,9 @@
                                                 <span className="text-sm">Configurar Saldo Total</span>
                                             </button>
 
-                                            <div className="white-card p-4 border border-black/5">
-                                                <p className="text-[9px] uppercase text-black/50 font-black mb-1">Monto Base (Sesión)</p>
-                                                <span className="text-xl font-black text-[#000d1a]">{formatARS(sessionStartAmount)}</span>
+                                            <div className="bg-[#121421] p-4 border border-white/10 rounded-2xl shadow-xl">
+                                                <p className="text-[9px] uppercase text-gray-100/90 font-black mb-1">Monto Base (Sesión)</p>
+                                                <span className="text-xl font-black text-white">{formatARS(sessionStartAmount)}</span>
                                             </div>
 
                                             <div className="space-y-2">
@@ -1812,7 +1952,7 @@
                                                         style={{ width: `${Math.min(100, Math.max(0, sessionStartAmount === 0 ? (totals.balance > 0 ? 100 : 0) : ((sessionStartAmount + totals.balance) / sessionStartAmount) * 50))}%` }}
                                                     ></div>
                                                 </div>
-                                                <div className="flex justify-between text-[9px] font-bold uppercase tracking-tighter text-white/20">
+                                                <div className="flex justify-between text-[9px] font-bold uppercase tracking-tighter text-white/40">
                                                     <span>Progreso: {sessionStartAmount === 0 ? 'N/A' : `${((totals.balance / sessionStartAmount) * 100).toFixed(1)}%`}</span>
                                                     <span>Sesión Live</span>
                                                 </div>
@@ -1821,66 +1961,38 @@
                                     </div>
                                 </div>
 
-                                {/* COACH DE FINANZAS */}
-                                <CoachFinanciero
-                                    transactions={transactions}
-                                    totals={totals}
-                                    profile={profile}
-                                />
-
                                 {/* GRID SUPERIOR (BENTO) */}
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                    <div className="md:col-span-2 glass p-1 rounded-[2.5rem] border-white/5 relative overflow-hidden group">
-                                        <div className="bg-white/5 p-6 rounded-[2.4rem] h-full">
-                                            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                                                <div className="w-32 h-32 bg-blue-500 rounded-full blur-3xl"></div>
+                                    <div className="md:col-span-2 glass p-6 rounded-[2.5rem] border-white/5 relative overflow-hidden group">
+                                        <div className="relative z-10">
+                                            <p className="text-[10px] uppercase text-gray-100/90 font-bold tracking-[0.2em] mb-4">Gasto Total Período</p>
+                                            <div className="flex items-end gap-3">
+                                                <h2 className="text-4xl font-black tracking-tight text-white">{formatARS(totals.gastos)}</h2>
+                                                {comparisonData.prevGastos > 0 && (
+                                                    <div className={`mb-1.5 flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold ${comparisonData.gastosPct <= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                                                        {comparisonData.gastosPct <= 0 ? '↘' : '↗'} {Math.abs(comparisonData.gastosPct).toFixed(0)}%
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className="relative z-10">
-                                                <p className="text-[10px] uppercase text-white/40 font-bold tracking-[0.2em] mb-4">Gasto Total Período</p>
-                                                <div className="flex items-end gap-3">
-                                                    <h2 className="text-4xl font-extrabold tracking-tight text-glow">{formatARS(totals.gastos)}</h2>
-                                                    {comparisonData.prevGastos > 0 && (
-                                                        <div className={`mb-1.5 flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold ${comparisonData.gastosPct <= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                                                            {comparisonData.gastosPct <= 0 ? '↘' : '↗'} {Math.abs(comparisonData.gastosPct).toFixed(0)}%
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <p className="text-xs text-white/30 mt-2">vs. {comparisonData.labelB} ({formatARS(comparisonData.prevGastos)})</p>
-                                            </div>
+                                            <p className="text-xs text-gray-100/70 mt-2">vs. {comparisonData.labelB} ({formatARS(comparisonData.prevGastos)})</p>
                                         </div>
                                     </div>
 
-                                    <div className="glass p-1 rounded-[2rem] border-white/5">
-                                        <div className="white-card p-6 rounded-[1.9rem] h-full flex flex-col justify-between shadow-2xl relative overflow-hidden group">
-                                            <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-                                                <Icons.Trend className="w-16 h-16" />
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] uppercase font-black tracking-widest opacity-40 mb-1">Balance</p>
-                                                <h3 className={`text-2xl font-black ${totals.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                    {formatARS(totals.balance)}
-                                                </h3>
-                                            </div>
-                                            <div className="h-1 w-full bg-slate-100 rounded-full mt-4 overflow-hidden">
-                                                <div className="h-full bg-blue-600 rounded-full transition-all duration-1000" style={{ width: '65%' }}></div>
-                                            </div>
+                                    <div className="glass p-6 rounded-[2rem] border-white/5 relative overflow-hidden group">
+                                        <div>
+                                            <p className="text-[10px] uppercase font-black tracking-widest text-gray-100/90 mb-1">Balance</p>
+                                            <h3 className={`text-2xl font-black ${totals.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                {formatARS(totals.balance)}
+                                            </h3>
                                         </div>
                                     </div>
 
-                                    <div className="glass p-1 rounded-[2rem] border-white/5">
-                                        <div className="white-card p-6 rounded-[1.9rem] h-full flex flex-col justify-between shadow-2xl relative overflow-hidden group">
-                                            <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-                                                <Icons.Safe className="w-16 h-16" />
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] uppercase font-black tracking-widest opacity-40 mb-1">Patrimonio</p>
-                                                <h3 className="text-2xl font-black text-slate-900">
-                                                    {formatARS(totals.patrimonio || (totals.ahorro + totals.inversiones))}
-                                                </h3>
-                                            </div>
-                                            <div className="h-1 w-full bg-slate-100 rounded-full mt-4 overflow-hidden">
-                                                <div className="h-full bg-purple-600 rounded-full transition-all duration-1000" style={{ width: '40%' }}></div>
-                                            </div>
+                                    <div className="glass p-6 rounded-[2rem] border-white/5 relative overflow-hidden group">
+                                        <div>
+                                            <p className="text-[10px] uppercase font-black tracking-widest text-gray-100/90 mb-1">Inversiones</p>
+                                            <h3 className="text-2xl font-black text-cyan-400">
+                                                {formatARS(totals.patrimonio)}
+                                            </h3>
                                         </div>
                                     </div>
                                 </div>
@@ -1888,22 +2000,28 @@
                                 {/* FILA MEDIA: GRÁFICO CIRCULAR + MIS TARJETAS */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div className="md:col-span-1 glass p-6 rounded-3xl flex flex-col items-center">
-                                        <h3 className="text-xs uppercase text-white/40 font-bold tracking-wider mb-6 w-full">Distribución de Gastos</h3>
+                                        <h3 className="text-xs uppercase text-gray-100/90 font-bold tracking-wider mb-6 w-full">Distribución General</h3>
                                         <div className="relative w-full aspect-square max-w-[200px]">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <PieChart>
-                                                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={65} outerRadius={85} paddingAngle={8} dataKey="value" stroke="none">
-                                                        {pieData.map((entry, i) => <Cell key={i} fill={entry.color} cornerRadius={10} />)}
+                                                    <Pie data={dashboardPieData} cx="50%" cy="50%" innerRadius={65} outerRadius={85} paddingAngle={8} dataKey="value" stroke="none">
+                                                        {dashboardPieData.map((entry, i) => <Cell key={i} fill={entry.color} cornerRadius={10} />)}
                                                     </Pie>
+                                                    <Tooltip
+                                                        formatter={(v) => formatARS(v)}
+                                                        contentStyle={{ background: '#111421', border: 'none', borderRadius: '15px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
+                                                        itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                                                        cursor={{ fill: 'transparent' }}
+                                                    />
                                                 </PieChart>
                                             </ResponsiveContainer>
                                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                                <p className="text-[10px] text-white/30 uppercase font-bold tracking-tighter">Total</p>
-                                                <p className="text-lg font-black tracking-tight">{formatARS(totals.gastos).replace('$', '').split(',')[0]}</p>
+                                                <p className="text-[10px] text-gray-100/70 uppercase font-bold tracking-tighter">Total Período</p>
+                                                <p className="text-lg font-black tracking-tight">{formatARS(dashboardPieData.reduce((s, d) => s + d.value, 0)).replace('$', '').split(',')[0]}</p>
                                             </div>
                                         </div>
                                         <div className="mt-6 w-full space-y-2">
-                                            {pieData.map((d, i) => (
+                                            {dashboardPieData.map((d, i) => (
                                                 <div key={i} className="flex justify-between items-center text-[10px]">
                                                     <span className="flex items-center gap-2 text-white/50"><div className="w-2 h-2 rounded-full" style={{ background: d.color }}></div> {d.name}</span>
                                                     <span className="font-bold">{formatARS(d.value)}</span>
@@ -1923,14 +2041,14 @@
                                                         <div className="relative z-10 h-full flex flex-col justify-between">
                                                             <div className="flex justify-between items-start">
                                                                 <span className="text-xl">{card.icon}</span>
-                                                                <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase">{card.nombre}</span>
+                                                                <span className="text-[10px] font-bold tracking-widest text-gray-100/90 uppercase">{card.nombre}</span>
                                                             </div>
                                                             <div>
-                                                                <p className="text-[10px] text-white/40 mb-1">Deuda Acumulada</p>
+                                                                <p className="text-[10px] text-gray-100/90 mb-1">Deuda Acumulada</p>
                                                                 <p className="text-2xl font-bold tracking-tight">{formatARS(cardDebt)}</p>
                                                             </div>
                                                             <div className="flex justify-between items-center">
-                                                                <p className="text-[8px] font-mono tracking-widest text-white/20">**** **** **** 1234</p>
+                                                                <p className="text-[8px] font-mono tracking-widest text-white/40">**** **** **** 1234</p>
                                                                 <div className="w-8 h-5 bg-white/20 rounded-md backdrop-blur-md border border-white/10"></div>
                                                             </div>
                                                         </div>
@@ -1942,7 +2060,7 @@
                                         {/* ÚLTIMOS MOVIMIENTOS DASHBOARD */}
                                         <div className="glass p-6 rounded-3xl">
                                             <div className="flex justify-between items-center mb-4">
-                                                <h3 className="text-xs uppercase text-white/40 font-bold tracking-wider">Últimos Movimientos</h3>
+                                                <h3 className="text-xs uppercase text-gray-100/90 font-bold tracking-wider">Últimos Movimientos</h3>
                                                 <button onClick={() => setActiveTab('gastos')} className="text-[10px] text-blue-400 font-bold hover:underline">Ver todos</button>
                                             </div>
                                             {renderList(filteredByTime.slice(0, 4))}
@@ -1952,7 +2070,7 @@
 
                                 {/* FILA INFERIOR: GRÁFICO DE TENDENCIA */}
                                 <div className="glass p-6 rounded-3xl">
-                                    <h3 className="text-xs uppercase text-white/40 font-bold tracking-wider mb-6">Tendencia de Gastos</h3>
+                                    <h3 className="text-xs uppercase text-gray-100/90 font-bold tracking-wider mb-6">Tendencia de Gastos</h3>
                                     <div className="h-[250px] w-full">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <AreaChart data={trendData}>
@@ -1965,17 +2083,9 @@
                                                 <XAxis dataKey="fecha" hide />
                                                 <YAxis hide />
                                                 <Tooltip
-                                                    content={({ active, payload }) => {
-                                                        if (active && payload && payload.length) {
-                                                            return (
-                                                                <div className="glass-dark p-3 rounded-xl border border-white/10">
-                                                                    <p className="text-[10px] text-white/40 mb-1">{payload[0].payload.fecha}</p>
-                                                                    <p className="text-sm font-bold text-blue-400">Gasto: {formatARS(payload[0].value)}</p>
-                                                                </div>
-                                                            );
-                                                        }
-                                                        return null;
-                                                    }}
+                                                    formatter={(v) => formatARS(v)}
+                                                    contentStyle={{ background: '#111421', border: 'none', borderRadius: '15px' }}
+                                                    itemStyle={{ color: '#fff', fontWeight: 'bold' }}
                                                 />
                                                 <Area type="monotone" dataKey="gastos" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorWave)" />
                                             </AreaChart>
@@ -1995,7 +2105,7 @@
                                         </div>
                                         <div>
                                             <h2 className="text-2xl font-black tracking-tight text-white">{PILARES[activeTab].nombre}</h2>
-                                            <p className="text-xs text-white/30 font-medium">Gestión detallada de {PILARES[activeTab].nombre.toLowerCase()}</p>
+                                            <p className="text-xs text-gray-100/70 font-medium">Gestión detallada de {PILARES[activeTab].nombre.toLowerCase()}</p>
                                         </div>
                                     </div>
                                     <button onClick={() => { resetForm(); setFormData({ ...formData, seccion: activeTab }); setShowModal(true); }} className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-2xl font-black text-xs transition-all flex items-center gap-3 shadow-lg shadow-blue-600/20 active:scale-95">
@@ -2008,15 +2118,70 @@
                                     const subDist = {};
                                     items.forEach(t => { subDist[t.subcategoria] = (subDist[t.subcategoria] || 0) + (t.monto || 0); });
                                     const pieSubData = Object.entries(subDist).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-                                    const colors = ['#818cf8', '#6366f1', '#4338ca', '#3730a3', '#312e81', '#1e1b4b'];
                                     return (
                                         <>
+                                            {activeTab === 'ahorro' && (
+                                                <div className="mb-8 animate-slide">
+                                                    <div className="flex items-center gap-2 mb-6">
+                                                        <span className="text-blue-400 font-bold"><Icons.Safe /></span>
+                                                        <h3 className="text-xs uppercase font-black tracking-[0.2em] text-white">Mis Alcancías (Buckets)</h3>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                        {(profile.categories || PILARES).ahorro.subcategorias.map((sub, i) => {
+                                                            const subTotal = items.filter(t => t.subcategoria === sub).reduce((s, t) => s + (t.monto || 0), 0);
+                                                            const meta = (profile.categories || PILARES).ahorro.metas?.[sub] || 0;
+                                                            const progreso = meta > 0 ? Math.min(100, (subTotal / meta) * 100) : 0;
+
+                                                            return (
+                                                                <div key={i} className="bg-[#1a1c2e] p-6 rounded-[2.5rem] border border-white/5 relative overflow-hidden group shadow-xl">
+                                                                    <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
+                                                                        <span className="text-4xl">💰</span>
+                                                                    </div>
+                                                                    <div className="relative z-10 h-full flex flex-col">
+                                                                        <p className="text-[10px] uppercase font-black tracking-widest text-blue-400 mb-1">{sub}</p>
+                                                                        <h4 className="text-2xl font-black text-white mb-4">{formatARS(subTotal)}</h4>
+
+                                                                        <div className="flex-1">
+                                                                            {meta > 0 && (
+                                                                                <div className="space-y-2 mb-6">
+                                                                                    <div className="flex justify-between text-[9px] font-black uppercase text-white/40 tracking-tighter">
+                                                                                        <span>Progreso: {progreso.toFixed(0)}%</span>
+                                                                                        <span>Meta: {formatARS(meta)}</span>
+                                                                                    </div>
+                                                                                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                                                                                        <div
+                                                                                            className={`h-full bg-gradient-to-r ${progreso >= 100 ? 'from-emerald-500 to-emerald-400' : 'from-blue-600 to-blue-400'} rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.3)]`}
+                                                                                            style={{ width: `${progreso}%` }}
+                                                                                        ></div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                resetForm();
+                                                                                setFormData(prev => ({ ...prev, seccion: 'ahorro', subcategoria: sub }));
+                                                                                setShowModal(true);
+                                                                            }}
+                                                                            className="w-full bg-blue-600/10 hover:bg-blue-600 border border-blue-500/20 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 group/btn"
+                                                                        >
+                                                                            <span className="group-hover/btn:rotate-90 transition-transform"><Icons.Plus /></span>
+                                                                            Cargar Alcancía
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                                 <div className="glass p-6 rounded-3xl border border-white/10 relative overflow-hidden group">
                                                     <div className="absolute top-0 right-0 p-8 opacity-5"><p className="text-8xl font-black">{PILARES[activeTab].icon}</p></div>
-                                                    <p className="text-[10px] uppercase text-white/40 font-black tracking-widest mb-4">Total {activeTab}</p>
+                                                    <p className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest mb-4">Total {activeTab}</p>
                                                     <h3 className="text-4xl font-black text-white mb-2">{formatARS(total)}</h3>
-                                                    <p className="text-xs text-white/30 font-medium">{items.length} movimientos</p>
+                                                    <p className="text-xs text-gray-100/70 font-medium">{items.length} movimientos</p>
                                                 </div>
                                                 <div className="md:col-span-2 glass p-6 rounded-3xl border border-white/10 flex flex-col md:flex-row items-center gap-8">
                                                     <div className="relative w-32 h-32 shrink-0">
@@ -2025,6 +2190,11 @@
                                                                 <Pie data={pieSubData} cx="50%" cy="50%" innerRadius={40} outerRadius={55} paddingAngle={4} dataKey="value" stroke="none">
                                                                     {pieSubData.map((entry, i) => <Cell key={i} fill={colors[i % colors.length]} cornerRadius={6} />)}
                                                                 </Pie>
+                                                                <Tooltip
+                                                                    formatter={(v) => formatARS(v)}
+                                                                    contentStyle={{ background: '#111421', border: 'none', borderRadius: '15px' }}
+                                                                    itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                                                                />
                                                             </PieChart>
                                                         </ResponsiveContainer>
                                                     </div>
@@ -2033,7 +2203,7 @@
                                                             <div key={i} className="space-y-1">
                                                                 <div className="flex justify-between text-[10px] font-bold">
                                                                     <span className="text-white/60">{d.name}</span>
-                                                                    <span className="text-white">{total > 0 ? ((d.value / total) * 100).toFixed(0) : 0}%</span>
+                                                                    <span className="text-white font-black">{total > 0 ? ((d.value / total) * 100).toFixed(0) : 0}%</span>
                                                                 </div>
                                                                 <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                                                                     <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${total > 0 ? (d.value / total) * 100 : 0}%`, background: colors[i % colors.length] }}></div>
@@ -2044,7 +2214,7 @@
                                                 </div>
                                             </div>
                                             <div className="glass p-6 rounded-3xl border border-white/5">
-                                                <h3 className="text-xs uppercase text-white/40 font-bold tracking-wider mb-4">Detalle de {PILARES[activeTab].nombre}</h3>
+                                                <h3 className="text-xs uppercase text-gray-100/90 font-bold tracking-wider mb-4">Detalle de {PILARES[activeTab].nombre}</h3>
                                                 {renderList(items)}
                                             </div>
                                         </>
@@ -2064,7 +2234,7 @@
                                         </div>
                                         <div>
                                             <h2 className="text-2xl font-black tracking-tight text-white">Tarjetas</h2>
-                                            <p className="text-xs text-white/30 font-medium">Cronograma de vencimientos y deudas</p>
+                                            <p className="text-xs text-gray-100/70 font-medium">Cronograma de vencimientos y deudas</p>
                                         </div>
                                     </div>
                                     <button onClick={() => { resetForm(); setFormData({ ...formData, seccion: 'tarjetas' }); setShowModal(true); }} className="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-2xl font-black text-xs transition-all flex items-center gap-3 shadow-lg shadow-purple-600/20 active:scale-95">
@@ -2091,9 +2261,9 @@
                                         <>
                                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                                 <div className="md:col-span-1 glass p-6 rounded-3xl border border-white/10 flex flex-col justify-center">
-                                                    <p className="text-[10px] uppercase text-white/40 font-black tracking-widest mb-4">Deuda Total</p>
+                                                    <p className="text-[10px] uppercase text-gray-100/90 font-black tracking-widest mb-4">Deuda Total</p>
                                                     <h3 className="text-3xl font-black text-purple-400 mb-2">{formatARS(total)}</h3>
-                                                    <p className="text-[10px] text-white/20 font-medium">Suma de todos los ciclos</p>
+                                                    <p className="text-[10px] text-white/40 font-medium">Suma de todos los ciclos</p>
                                                 </div>
 
                                                 <div className="md:col-span-3 glass p-6 rounded-3xl border border-white/10 flex flex-col md:flex-row items-center gap-8">
@@ -2103,6 +2273,11 @@
                                                                 <Pie data={pieCardData} cx="50%" cy="50%" innerRadius={40} outerRadius={55} paddingAngle={4} dataKey="value" stroke="none">
                                                                     {pieCardData.map((entry, i) => <Cell key={i} fill={colors[i % colors.length]} cornerRadius={6} />)}
                                                                 </Pie>
+                                                                <Tooltip
+                                                                    formatter={(v) => formatARS(v)}
+                                                                    contentStyle={{ background: '#111421', border: 'none', borderRadius: '15px' }}
+                                                                    itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                                                                />
                                                             </PieChart>
                                                         </ResponsiveContainer>
                                                     </div>
@@ -2137,7 +2312,7 @@
                                                         </div>
                                                     );
                                                 })}
-                                                {items.length === 0 && <p className="text-center py-12 text-white/20">Sin deudas registradas</p>}
+                                                {items.length === 0 && <p className="text-center py-12 text-white/40">Sin deudas registradas</p>}
                                             </div>
                                         </>
                                     );
@@ -2154,46 +2329,146 @@
                                     </div>
                                     <div>
                                         <h2 className="text-2xl font-black tracking-tight text-white">Análisis Avanzado</h2>
-                                        <p className="text-xs text-white/30 font-medium">Métricas globales y comportamiento</p>
+                                        <p className="text-xs text-gray-100/70 font-medium">Métricas globales y comportamiento</p>
                                     </div>
                                 </div>
-                                {/* SECCIÓN MIGRADA: TIENDAS Y CATEGORÍAS */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* DASHBOARD DE EFICIENCIA */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="md:col-span-2 glass p-8 rounded-[2rem] border border-white/10 flex flex-col md:flex-row items-center gap-8">
+                                        <div className="flex-1">
+                                            <h3 className="text-xs uppercase text-gray-100/90 font-black tracking-widest mb-2">Tasa de Ahorro e Inversión</h3>
+                                            <p className="text-[10px] text-gray-100/70 font-bold uppercase mb-6">Eficiencia de tu capital este periodo</p>
+                                            <h2 className="text-6xl font-black text-white tracking-tighter mb-2">
+                                                {savingsMetrics.ratio.toFixed(1)}%
+                                            </h2>
+                                            <p className="text-xs text-blue-400 font-bold uppercase tracking-widest">
+                                                {savingsMetrics.ratio > 20 ? '🔥 Excelente nivel de ahorro' : '🏦 Meta: Superar el 20%'}
+                                            </p>
+                                        </div>
+                                        <div className="w-full md:w-48 h-24 bg-white/5 rounded-3xl border border-white/10 p-6 flex flex-col justify-center">
+                                            <p className="text-[9px] uppercase font-black text-gray-100/70 mb-2">Total Salvado</p>
+                                            <p className="text-xl font-black text-white">{formatARS(savingsMetrics.totalSavings)}</p>
+                                        </div>
+                                    </div>
+                                    <div className="glass p-8 rounded-[2rem] border border-white/10 flex flex-col justify-center text-center">
+                                        <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-2xl text-emerald-400 mx-auto mb-4">📈</div>
+                                        <p className="text-[10px] uppercase font-black text-gray-100/90 mb-1">Impacto Patrimonial</p>
+                                        <p className="text-2xl font-black text-white">{formatARS(totals.patrimonio)}</p>
+                                    </div>
+                                </div>
 
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* DISTRIBUCIÓN Y DESGLOSE */}
                                     <div className="glass p-8 rounded-[2rem] border border-white/10">
-                                        <h3 className="text-xs uppercase text-white/40 font-black tracking-widest mb-8">Distribución por Categoría</h3>
-                                        <div className="h-[300px]">
+                                        <h3 className="text-xs uppercase text-gray-100/90 font-black tracking-widest mb-8">Distribución por Categoría</h3>
+                                        <div className="h-[300px] relative">
                                             {pieData.length > 0 ? (
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <PieChart>
-                                                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5} dataKey="value" stroke="none">
-                                                            {pieData.map((entry, i) => <Cell key={i} fill={entry.color} cornerRadius={10} />)}
-                                                        </Pie>
-                                                        <Tooltip formatter={(v) => formatARS(v)} contentStyle={{ background: '#121421', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.9)' }} />
-                                                    </PieChart>
-                                                </ResponsiveContainer>
-                                            ) : <p className="text-center py-12 text-white/20">Sin datos</p>}
+                                                <div className="w-full h-full relative">
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                                        <p className="text-[10px] uppercase font-black text-gray-100/70">Total</p>
+                                                        <p className="text-2xl font-black text-white">{formatARS(pieData.reduce((s, d) => s + d.value, 0))}</p>
+                                                    </div>
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <PieChart>
+                                                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={75} outerRadius={105} paddingAngle={5} dataKey="value" stroke="none">
+                                                                {pieData.map((entry, i) => <Cell key={i} fill={entry.color} cornerRadius={12} />)}
+                                                            </Pie>
+                                                            <Tooltip
+                                                                formatter={(v) => formatARS(v)}
+                                                                contentStyle={{ background: '#111421', border: 'none', borderRadius: '15px' }}
+                                                                itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                                                            />
+                                                        </PieChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            ) : <p className="text-center py-12 text-white/40">Sin datos</p>}
                                         </div>
                                     </div>
 
+                                    {/* INGRESOS VS GASTOS */}
                                     <div className="glass p-8 rounded-[2rem] border border-white/10">
-                                        <h3 className="text-xs uppercase text-white/40 font-black tracking-widest mb-8">Ingresos vs Gastos</h3>
+                                        <h3 className="text-xs uppercase text-gray-100/90 font-black tracking-widest mb-8">Tendencia Temporal</h3>
                                         <div className="h-[300px]">
                                             {trendData.length > 0 ? (
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <AreaChart data={trendData}>
                                                         <defs>
-                                                            <linearGradient id="colorIng2" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
-                                                            <linearGradient id="colorGas2" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} /><stop offset="95%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
+                                                            <linearGradient id="colorIng2" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.4} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
+                                                            <linearGradient id="colorGas2" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.4} /><stop offset="95%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
                                                         </defs>
                                                         <XAxis dataKey="fecha" hide />
                                                         <YAxis hide />
-                                                        <Tooltip formatter={(v) => formatARS(v)} contentStyle={{ background: '#121421', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px' }} />
-                                                        <Area type="monotone" dataKey="ingresos" stroke="#10b981" fill="url(#colorIng2)" strokeWidth={3} />
-                                                        <Area type="monotone" dataKey="gastos" stroke="#f43f5e" fill="url(#colorGas2)" strokeWidth={3} />
+                                                        <Tooltip
+                                                            formatter={(v) => formatARS(v)}
+                                                            contentStyle={{ background: '#111421', border: 'none', borderRadius: '15px' }}
+                                                            itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                                                        />
+                                                        <Area type="monotone" dataKey="ingresos" stroke="#10b981" fill="url(#colorIng2)" strokeWidth={4} />
+                                                        <Area type="monotone" dataKey="gastos" stroke="#f43f5e" fill="url(#colorGas2)" strokeWidth={4} />
                                                     </AreaChart>
                                                 </ResponsiveContainer>
-                                            ) : <p className="text-center py-12 text-white/20">Sin datos</p>}
+                                            ) : <p className="text-center py-12 text-white/40">Sin datos</p>}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* DESGLOSE DETALLADO */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    {/* GASTOS POR SUBCATEGORÍA */}
+                                    <div className="glass p-8 rounded-[2rem] border border-white/10">
+                                        <h3 className="text-xs uppercase text-gray-100/90 font-black tracking-widest mb-8">Gastos por Subcategoría</h3>
+                                        <div className="space-y-6">
+                                            {subcategoriesAnalysis.gasto.slice(0, 6).map((item, i) => (
+                                                <div key={i}>
+                                                    <div className="flex justify-between text-[11px] font-bold text-white mb-2 uppercase tracking-tighter">
+                                                        <span>{item.name}</span>
+                                                        <span>{formatARS(item.value)}</span>
+                                                    </div>
+                                                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-rose-500 rounded-full transition-all duration-1000"
+                                                            style={{ width: `${(item.value / totals.gastos) * 100}%` }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {subcategoriesAnalysis.gasto.length === 0 && <p className="text-center py-8 text-white/20 text-[10px]">Sin gastos registrados</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* INVERSIONES DETALLE */}
+                                    <div className="glass p-8 rounded-[2rem] border border-white/10">
+                                        <h3 className="text-xs uppercase text-gray-100/90 font-black tracking-widest mb-8">Foco de Inversión</h3>
+                                        <div className="space-y-6">
+                                            {subcategoriesAnalysis.inversion.map((item, i) => (
+                                                <div key={i} className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+                                                    <div className="w-10 h-10 bg-cyan-500/10 rounded-xl flex items-center justify-center text-cyan-400 font-black text-xs">
+                                                        {item.name.substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-[10px] text-gray-100/70 font-bold uppercase">{item.name}</p>
+                                                        <p className="text-sm font-black text-white">{formatARS(item.value)}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {subcategoriesAnalysis.inversion.length === 0 && <p className="text-center py-8 text-white/20 text-[10px]">Sin inversiones este periodo</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* FUENTES DE INGRESO */}
+                                    <div className="glass p-8 rounded-[2rem] border border-white/10">
+                                        <h3 className="text-xs uppercase text-gray-100/90 font-black tracking-widest mb-8">Origen de Ingresos</h3>
+                                        <div className="space-y-6">
+                                            {subcategoriesAnalysis.ingreso.map((item, i) => (
+                                                <div key={i} className="flex items-center gap-4 bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/10">
+                                                    <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-400">💰</div>
+                                                    <div className="flex-1">
+                                                        <p className="text-[10px] text-gray-100/70 font-bold uppercase">{item.name}</p>
+                                                        <p className="text-sm font-black text-white">{formatARS(item.value)}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {subcategoriesAnalysis.ingreso.length === 0 && <p className="text-center py-8 text-white/20 text-[10px]">Sin ingresos registrados</p>}
                                         </div>
                                     </div>
                                 </div>
@@ -2221,11 +2496,11 @@
                                 <div className="glass p-8 rounded-[2.5rem] max-w-sm w-full relative z-[501] animate-pop shadow-[0_40px_100px_rgba(0,0,0,0.9)]" onClick={e => e.stopPropagation()}>
                                     <div className="w-16 h-16 bg-blue-600/20 rounded-2xl flex items-center justify-center text-3xl mb-6 mx-auto">💰</div>
                                     <h3 className="text-xl font-black text-center mb-2">Configurar Saldo Total</h3>
-                                    <p className="text-white/40 text-[10px] text-center uppercase font-bold tracking-widest mb-8">¿Con cuánta plata empezás hoy?</p>
+                                    <p className="text-gray-100/90 text-[10px] text-center uppercase font-bold tracking-widest mb-8">¿Con cuánta plata empezás hoy?</p>
 
                                     <div className="bg-white/5 p-6 rounded-3xl border border-white/10 mb-8">
                                         <div className="flex items-center gap-3">
-                                            <span className="text-2xl font-bold text-white/40">$</span>
+                                            <span className="text-2xl font-bold text-gray-100/90">$</span>
                                             <input
                                                 autoFocus
                                                 type="number"
@@ -2265,7 +2540,7 @@
                     {/* TAB BAR MOBILE */}
                     <nav className="md:hidden fixed bottom-0 left-0 right-0 glass-dark p-2 flex justify-start overflow-x-auto gap-0 z-40 no-scrollbar">
                         {TABS.map(tab => (
-                            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center gap-1 px-5 py-2 flex-shrink-0 transition-all ${activeTab === tab.id ? 'text-white' : 'text-white/40'}`}>
+                            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center gap-1 px-5 py-2 flex-shrink-0 transition-all ${activeTab === tab.id ? 'text-white' : 'text-gray-100/90'}`}>
                                 <span className="text-xl">{tab.icon}</span>
                                 <span className="text-[10px] font-bold uppercase tracking-widest">{tab.nombre}</span>
                             </button>
@@ -2286,11 +2561,11 @@
                                         <label className="text-[10px] uppercase text-blue-400 font-bold tracking-wider block mb-4">Clasificación</label>
                                         <div className="grid grid-cols-2 gap-4 mb-4">
                                             <div>
-                                                <label className="text-[10px] uppercase text-white/40 font-bold tracking-wider block mb-2">Producto / Concepto</label>
+                                                <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Producto / Concepto</label>
                                                 <input type="text" required placeholder="Ej: Café" value={formData.articulo} onChange={e => setFormData({ ...formData, articulo: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-blue-500 transition-all" />
                                             </div>
                                             <div>
-                                                <label className="text-[10px] uppercase text-white/40 font-bold tracking-wider block mb-2">Tienda / Lugar</label>
+                                                <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Tienda / Lugar</label>
                                                 <input list="frequent-items" type="text" placeholder={formData.seccion === 'inversiones' ? 'Ej: AAPL' : 'Ej: Starbucks'} value={formData.tienda} onChange={e => setFormData({ ...formData, tienda: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-blue-500 transition-all" />
                                                 <datalist id="frequent-items">
                                                     {(formData.seccion === 'inversiones' ? profile.inversionesFrecuentes : profile.tiendasFrecuentes)?.map(s => <option key={s} value={s} />)}
@@ -2299,22 +2574,22 @@
                                         </div>
                                         <div className="grid grid-cols-2 gap-4 mb-4">
                                             <div>
-                                                <label className="text-[10px] uppercase text-white/40 font-bold tracking-wider block mb-2">Monto (ARS)</label>
+                                                <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Monto (ARS)</label>
                                                 <input type="number" required inputMode="decimal" placeholder="0" value={formData.monto} onChange={e => setFormData({ ...formData, monto: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-blue-500 transition-all font-mono" />
                                             </div>
                                             <div>
-                                                <label className="text-[10px] uppercase text-white/40 font-bold tracking-wider block mb-2">Fecha</label>
+                                                <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Fecha</label>
                                                 <input type="date" required value={formData.fecha} onChange={e => setFormData({ ...formData, fecha: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-blue-500 transition-all" />
                                             </div>
                                         </div>
                                         <div className="mb-4">
-                                            <label className="text-[10px] uppercase text-white/40 font-bold tracking-wider block mb-2">Pilar</label>
+                                            <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Pilar</label>
                                             <select value={formData.seccion} onChange={e => setFormData({ ...formData, seccion: e.target.value, subcategoria: (profile.categories || PILARES)[e.target.value].subcategorias[0] || 'Otros' })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-blue-500 transition-all">
                                                 {Object.entries(profile.categories || PILARES).map(([key, val]) => <option key={key} value={key} className="bg-slate-900">{val.icon} {val.nombre}</option>)}
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="text-[10px] uppercase text-white/40 font-bold tracking-wider block mb-2">Subcategoría</label>
+                                            <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Subcategoría</label>
                                             <select value={formData.subcategoria} onChange={e => setFormData({ ...formData, subcategoria: e.target.value })} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl outline-none appearance-none cursor-pointer focus:border-blue-500 transition-all">
                                                 {(profile.categories || PILARES)[formData.seccion].subcategorias.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
                                             </select>
@@ -2326,7 +2601,7 @@
                                         <label className="text-[10px] uppercase text-blue-400 font-bold tracking-wider block mb-4">Método de Pago</label>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                             {MEDIOS_PAGO.map(m => (
-                                                <button key={m.id} type="button" onClick={() => setFormData({ ...formData, metodoPago: m.id })} className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-xs ${formData.metodoPago === m.id ? 'bg-blue-600/20 border-blue-500 text-white' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}>
+                                                <button key={m.id} type="button" onClick={() => setFormData({ ...formData, metodoPago: m.id })} className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-xs ${formData.metodoPago === m.id ? 'bg-blue-600/20 border-blue-500 text-white' : 'bg-white/5 border-white/10 text-gray-100/90 hover:bg-white/10'}`}>
                                                     <span>{m.icon}</span>
                                                     <span className="truncate">{m.nombre}</span>
                                                 </button>
@@ -2340,13 +2615,13 @@
                                             <p className="text-xs text-white/60 flex items-center gap-2">💳 Configuración de Cuotas</p>
                                             <div className="grid grid-cols-3 gap-3">
                                                 <div>
-                                                    <label className="text-[10px] uppercase text-white/40 font-bold tracking-wider block mb-2">Cuotas</label>
+                                                    <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Cuotas</label>
                                                     <select value={formData.cuotas} onChange={e => setFormData({ ...formData, cuotas: e.target.value })} className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg outline-none focus:border-purple-500 transition-all text-center appearance-none cursor-pointer">
                                                         {[...Array(12)].map((_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label className="text-[10px] uppercase text-white/40 font-bold tracking-wider block mb-2">Cuota Actual</label>
+                                                    <label className="text-[10px] uppercase text-gray-100/90 font-bold tracking-wider block mb-2">Cuota Actual</label>
                                                     <input type="number" inputMode="numeric" placeholder="1" value={formData.cuotaActual} onChange={e => setFormData({ ...formData, cuotaActual: e.target.value })} className="w-full p-3 bg-white/5 border border-white/10 rounded-lg outline-none focus:border-purple-500 transition-all text-center" />
                                                 </div>
                                                 <div>
