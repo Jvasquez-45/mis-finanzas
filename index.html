@@ -1814,7 +1814,7 @@
                     <header className="md:hidden glass-dark p-5 sticky top-0 z-30">
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-2">
-                                <img src="imagen/nivo-logo-blank.png" alt="Nivo Logo" className="w-7 h-7 object-contain" />
+                                <img src="imagen/logo-NIVO-celular.png" alt="Nivo Logo" className="w-7 h-7 object-contain" />
                                 <h1 className="text-lg font-bold">Nivo Pro</h1>
                             </div>
                         </div>
@@ -2118,6 +2118,7 @@
                                     const subDist = {};
                                     items.forEach(t => { subDist[t.subcategoria] = (subDist[t.subcategoria] || 0) + (t.monto || 0); });
                                     const pieSubData = Object.entries(subDist).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+                                    const colors = ['#818cf8', '#6366f1', '#4338ca', '#3730a3', '#312e81', '#1e1b4b'];
                                     return (
                                         <>
                                             {activeTab === 'ahorro' && (
